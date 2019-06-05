@@ -28,7 +28,7 @@
 #include "sys_config.h"
 
 //#define GAMELOOP 1
-#define MAX_SPRITES 30000
+#define MAX_SPRITES 8
 
 typedef struct physics_component_t {
   kmVec2 pos;
@@ -39,6 +39,10 @@ typedef struct physics_component_t {
 typedef struct render_component_t {
   binocle_sprite sprite;
 } render_component_t;
+
+typedef struct player_component_t {
+  bool jump;
+} player_component_t;
 
 binocle_window window;
 binocle_input input;
@@ -59,8 +63,13 @@ kmAABB2 bounding_box;
 binocle_ecs_t ecs;
 binocle_component_id_t physics_component_id;
 binocle_component_id_t render_component_id;
+binocle_component_id_t player_component_id;
+binocle_system_id_t movement_system_id;
+binocle_system_id_t rendering_system_id;
+binocle_system_id_t player_system_id;
 
 void update_entity(binocle_entity_id_t entity, float dt) {
+  binocle_log_info("Processing movement entity %lld", entity);
   physics_component_t *physics;
   binocle_ecs_get_component(&ecs, entity, physics_component_id, (void **)&physics);
   render_component_t *render;
@@ -92,6 +101,26 @@ void update_entity(binocle_entity_id_t entity, float dt) {
 
 }
 
+void process_movement(binocle_ecs_t *ecs, void *user_data, binocle_entity_id_t entity, float delta) {
+  update_entity(entity, delta);
+}
+
+void process_rendering(binocle_ecs_t *ecs, void *user_data, binocle_entity_id_t entity, float delta) {
+  physics_component_t *physics = NULL;
+  binocle_ecs_get_component(&ecs, entity, physics_component_id, (void **)&physics);
+  render_component_t *render = NULL;
+  binocle_ecs_get_component(&ecs, entity, render_component_id, (void **)&render);
+  if (physics == NULL || render == NULL) {
+    binocle_log_error("physics or render components are NULL for entity %lld", entity);
+    return;
+  }
+  binocle_sprite_batch_draw(&sprite_batch, render->sprite.material->texture, &physics->pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
+}
+
+void process_player(binocle_ecs_t *ecs, void *user_data, binocle_entity_id_t entity, float delta) {
+  binocle_log_info("Processing player entity %lld", entity);
+}
+
 void main_loop() {
   binocle_window_begin_frame(&window);
   binocle_input_update(&input);
@@ -112,22 +141,24 @@ void main_loop() {
   kmVec2 scale;
   scale.x = 1.0f;
   scale.y = 1.0f;
+
+  binocle_ecs_process(&ecs, binocle_window_get_frame_time(&window) / 1000.0f);
+
+  /*
   for (int i = 0 ; i < MAX_SPRITES ; i++) {
-    update_entity(entities[i], (binocle_window_get_frame_time(&window) / 1000.0f));
-    //binocle_sprite_draw(entities[i].sprite, &gd, (uint64_t)entities[i].pos.x, (uint64_t)entities[i].pos.y, adapter.viewport, 0, scale, &camera);
-    //binocle_sprite_batch_draw_position(&sprite_batch, entities[i].sprite.material->texture, entities[i].pos);
     physics_component_t *physics;
     binocle_ecs_get_component(&ecs, entities[i], physics_component_id, (void **)&physics);
     render_component_t *render;
     binocle_ecs_get_component(&ecs, entities[i], render_component_id, (void **)&render);
     binocle_sprite_batch_draw(&sprite_batch, render->sprite.material->texture, &physics->pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
   }
+   */
   kmMat4 view_matrix;
   kmMat4Identity(&view_matrix);
   binocle_bitmapfont_draw_string(font, "TEST", 12, &gd, 20, 20, adapter.viewport, binocle_color_white(), view_matrix);
   binocle_sprite_batch_end(&sprite_batch, binocle_camera_get_viewport(camera));
   char fps_string[256];
-  sprintf(fps_string, "FPS: %lld SPRITES: %lld", binocle_window_get_fps(&window), MAX_SPRITES);
+  sprintf(fps_string, "FPS: %lld SPRITES: %d", binocle_window_get_fps(&window), MAX_SPRITES);
   binocle_bitmapfont_draw_string(font, fps_string, 32, &gd, 10, window.original_height - 32, adapter.viewport, binocle_color_black(), view_matrix);
   binocle_window_refresh(&window);
   binocle_window_end_frame(&window);
@@ -162,6 +193,24 @@ int main(int argc, char *argv[])
   if (!binocle_ecs_create_component(&ecs, "render", sizeof(render_component_t), &render_component_id)) {
     binocle_log_error("Cannot create component render");
   }
+  if (!binocle_ecs_create_component(&ecs, "player", sizeof(player_component_t), &player_component_id)) {
+    binocle_log_error("Cannot create component player");
+  }
+  if (!binocle_ecs_create_system(&ecs, "movement", NULL, process_movement, NULL, NULL, NULL, NULL, BINOCLE_SYSTEM_FLAG_NORMAL, &movement_system_id)) {
+    binocle_log_error("Cannot create movement system");
+  }
+  /*
+  if (!binocle_ecs_create_system(&ecs, "rendering", NULL, process_rendering, NULL, NULL, NULL, NULL, BINOCLE_SYSTEM_FLAG_NORMAL, &rendering_system_id)) {
+    binocle_log_error("Cannot create rendering system");
+  }
+   */
+  if (!binocle_ecs_create_system(&ecs, "playercontrol", NULL, process_player, NULL, NULL, NULL, NULL, BINOCLE_SYSTEM_FLAG_NORMAL, &player_system_id)) {
+    binocle_log_error("Cannot create playercontrol system");
+  } else {
+    if (!binocle_ecs_watch(&ecs, player_system_id, player_component_id)) {
+      binocle_log_error("Cannot watch player component");
+    }
+  }
   if (!binocle_ecs_initialize(&ecs)) {
     binocle_log_error("Cannot initialize ECS");
   }
@@ -191,6 +240,13 @@ int main(int argc, char *argv[])
       if (!binocle_ecs_set_component(&ecs, entities[i], render_component_id, &r)) {
         binocle_log_error("Cannot set render component for entity %lld", entities[i]);
       }
+      if (i == 0) {
+        player_component_t player = {0};
+        if (!binocle_ecs_set_component(&ecs, entities[i], player_component_id, &player)) {
+          binocle_log_error("Cannot set player component for entity %lld", entities[i]);
+        }
+      }
+      binocle_ecs_signal(&ecs, entities[i], BINOCLE_ENTITY_ADDED);
     }
   }
 
