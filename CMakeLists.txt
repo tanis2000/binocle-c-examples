@@ -13,3 +13,9 @@ ExternalProject_Add(spritebatch
     SOURCE_DIR ${PROJECT_SOURCE_DIR}/spritebatch
     INSTALL_COMMAND cmake -E echo "Skipping install step."
 )
+
+ExternalProject_Add(ecs
+        DOWNLOAD_COMMAND ""
+        SOURCE_DIR ${PROJECT_SOURCE_DIR}/ecs
+        INSTALL_COMMAND cmake -E echo "Skipping install step."
+)
