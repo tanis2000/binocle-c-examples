@@ -196,7 +196,7 @@ if (APPLE)
                 ${PROJECT_NAME}
                 PROPERTIES
                 MACOSX_BUNDLE YES
-                MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/build/ios/Info.plist"
+                MACOSX_BUNDLE_INFO_PLIST "${PROJECT_SOURCE_DIR}/../binocle-c/build/ios/Info.plist"
                 XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
                 XCODE_ATTRIBUTE_INFOPLIST_PREPROCESS YES
                 XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 8.0

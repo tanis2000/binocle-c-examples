@@ -28,7 +28,14 @@
 #include "sys_config.h"
 
 //#define GAMELOOP 1
-#define MAX_SPRITES 8
+#if defined(__IPHONEOS__)
+#define DESIGN_WIDTH 812
+#define DESIGN_HEIGHT 345
+#else // defined(__IPHONEOS__)
+#define DESIGN_WIDTH 320
+#define DESIGN_HEIGHT 240
+#endif // defined(__IPHONEOS__)
+#define MAX_SPRITES 50000
 
 typedef struct physics_component_t {
   kmVec2 pos;
@@ -67,13 +74,20 @@ binocle_component_id_t player_component_id;
 binocle_system_id_t movement_system_id;
 binocle_system_id_t rendering_system_id;
 binocle_system_id_t player_system_id;
+uint64_t last_fps;
+float frame_counter;
+char *binocle_data_dir = NULL;
 
 void update_entity(binocle_entity_id_t entity, float dt) {
-  binocle_log_info("Processing movement entity %lld", entity);
-  physics_component_t *physics;
+  //binocle_log_info("Processing movement entity %lld", entity);
+  physics_component_t *physics = NULL;
   binocle_ecs_get_component(&ecs, entity, physics_component_id, (void **)&physics);
-  render_component_t *render;
+  render_component_t *render = NULL;
   binocle_ecs_get_component(&ecs, entity, render_component_id, (void **)&render);
+    if (physics == NULL || render == NULL) {
+        binocle_log_error("update_entity(): physics or render components are NULL for entity %lld", entity);
+        return;
+    }
 
   physics->pos.x += physics->speed.x * dt;
   physics->pos.y += physics->speed.y * dt;
@@ -107,22 +121,28 @@ void process_movement(binocle_ecs_t *ecs, void *user_data, binocle_entity_id_t e
 
 void process_rendering(binocle_ecs_t *ecs, void *user_data, binocle_entity_id_t entity, float delta) {
   physics_component_t *physics = NULL;
-  binocle_ecs_get_component(&ecs, entity, physics_component_id, (void **)&physics);
+  binocle_ecs_get_component(ecs, entity, physics_component_id, (void **)&physics);
   render_component_t *render = NULL;
-  binocle_ecs_get_component(&ecs, entity, render_component_id, (void **)&render);
+  binocle_ecs_get_component(ecs, entity, render_component_id, (void **)&render);
   if (physics == NULL || render == NULL) {
-    binocle_log_error("physics or render components are NULL for entity %lld", entity);
+    binocle_log_error("process_rendering(): physics or render components are NULL for entity %lld", entity);
     return;
   }
   binocle_sprite_batch_draw(&sprite_batch, render->sprite.material->texture, &physics->pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
 }
 
 void process_player(binocle_ecs_t *ecs, void *user_data, binocle_entity_id_t entity, float delta) {
-  binocle_log_info("Processing player entity %lld", entity);
+  //binocle_log_info("Processing player entity %lld", entity);
+}
+
+void player_subscribed(binocle_ecs_t *ecs, void *user_data, binocle_entity_id_t entity) {
+  //binocle_log_info("Player subscribed entity %lld", entity);
 }
 
 void main_loop() {
   binocle_window_begin_frame(&window);
+  float dt = binocle_window_get_frame_time(&window) / 1000.0f;
+
   binocle_input_update(&input);
 
   if (input.resized) {
@@ -142,7 +162,7 @@ void main_loop() {
   scale.x = 1.0f;
   scale.y = 1.0f;
 
-  binocle_ecs_process(&ecs, binocle_window_get_frame_time(&window) / 1000.0f);
+  binocle_ecs_process(&ecs, dt);
 
   /*
   for (int i = 0 ; i < MAX_SPRITES ; i++) {
@@ -155,32 +175,62 @@ void main_loop() {
    */
   kmMat4 view_matrix;
   kmMat4Identity(&view_matrix);
-  binocle_bitmapfont_draw_string(font, "TEST", 12, &gd, 20, 20, adapter.viewport, binocle_color_white(), view_matrix);
   binocle_sprite_batch_end(&sprite_batch, binocle_camera_get_viewport(camera));
+
   char fps_string[256];
-  sprintf(fps_string, "FPS: %lld SPRITES: %d", binocle_window_get_fps(&window), MAX_SPRITES);
-  binocle_bitmapfont_draw_string(font, fps_string, 32, &gd, 10, window.original_height - 32, adapter.viewport, binocle_color_black(), view_matrix);
+  sprintf(fps_string, "FPS: %lld", last_fps);
+  binocle_bitmapfont_draw_string(font, fps_string, 16, &gd, 10, window.original_height - 32, adapter.viewport, binocle_color_black(), view_matrix);
+  char sprites_string[256];
+  sprintf(sprites_string, "SPRITES: %lld", MAX_SPRITES);
+  binocle_bitmapfont_draw_string(font, sprites_string, 16, &gd, 10, window.original_height - 64, adapter.viewport, binocle_color_black(), view_matrix);
   binocle_window_refresh(&window);
   binocle_window_end_frame(&window);
+
+  frame_counter += dt;
+  if (frame_counter >= 1.0f) {
+    frame_counter = 0;
+    last_fps = binocle_window_get_fps(&window);
+  }
   //binocle_log_info("FPS: %d", binocle_window_get_fps(&window));
 }
 
 int main(int argc, char *argv[])
 {
   binocle_sdl_init();
-  window = binocle_window_new(320, 240, "Binocle Sprite Batch");
+  window = binocle_window_new(DESIGN_WIDTH, DESIGN_HEIGHT, "Binocle ECS");
   binocle_window_set_background_color(&window, binocle_color_azure());
   adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING, BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window.original_width, window.original_height, window.original_width, window.original_height);
   camera = binocle_camera_new(&adapter);
   input = binocle_input_new();
+
+#if defined(__EMSCRIPTEN__)
+  binocle_data_dir = malloc(1024);
+  sprintf(binocle_data_dir, "/Users/tanis/Documents/ld43-binocle/assets/");
+#elif defined(__WINDOWS__)
+  char *base_path = SDL_GetBasePath();
+  if (base_path) {
+    binocle_data_dir = malloc(strlen(base_path) + 7);
+    sprintf(binocle_data_dir, "%s%s", base_path, "assets\\");
+  } else {
+    binocle_data_dir = SDL_strdup("./assets");
+  }
+#else
+  char *base_path = SDL_GetBasePath();
+  if (base_path) {
+    binocle_data_dir = base_path;
+  } else {
+    binocle_data_dir = SDL_strdup("./");
+  }
+#endif
+
   char filename[1024];
-  sprintf(filename, "%s%s", BINOCLE_DATA_DIR, "wabbit_alpha.png");
+  sprintf(filename, "%s%s", binocle_data_dir, "wabbit_alpha.png");
   binocle_image image = binocle_image_load(filename);
   binocle_texture texture = binocle_texture_from_image(image);
   char vert[1024];
-  sprintf(vert, "%s%s", BINOCLE_DATA_DIR, "default.vert");
+  sprintf(vert, "%s%s", binocle_data_dir, "default.vert");
   char frag[1024];
-  sprintf(frag, "%s%s", BINOCLE_DATA_DIR, "default.frag");
+  sprintf(frag, "%s%s", binocle_data_dir, "default.frag");
   shader = binocle_shader_load_from_file(vert, frag);
   binocle_material material = binocle_material_new();
   material.texture = &texture;
@@ -199,12 +249,10 @@ int main(int argc, char *argv[])
   if (!binocle_ecs_create_system(&ecs, "movement", NULL, process_movement, NULL, NULL, NULL, NULL, BINOCLE_SYSTEM_FLAG_NORMAL, &movement_system_id)) {
     binocle_log_error("Cannot create movement system");
   }
-  /*
   if (!binocle_ecs_create_system(&ecs, "rendering", NULL, process_rendering, NULL, NULL, NULL, NULL, BINOCLE_SYSTEM_FLAG_NORMAL, &rendering_system_id)) {
     binocle_log_error("Cannot create rendering system");
   }
-   */
-  if (!binocle_ecs_create_system(&ecs, "playercontrol", NULL, process_player, NULL, NULL, NULL, NULL, BINOCLE_SYSTEM_FLAG_NORMAL, &player_system_id)) {
+  if (!binocle_ecs_create_system(&ecs, "playercontrol", NULL, process_player, NULL, player_subscribed, NULL, NULL, BINOCLE_SYSTEM_FLAG_NORMAL, &player_system_id)) {
     binocle_log_error("Cannot create playercontrol system");
   } else {
     if (!binocle_ecs_watch(&ecs, player_system_id, player_component_id)) {
@@ -219,8 +267,8 @@ int main(int argc, char *argv[])
   gravity = -0.5f * 100.0f;
   bounding_box.min.x = 0;
   bounding_box.min.y = 0;
-  bounding_box.max.x = 320;
-  bounding_box.max.y = 240;
+  bounding_box.max.x = DESIGN_WIDTH;
+  bounding_box.max.y = DESIGN_HEIGHT;
   for (int i = 0 ; i < MAX_SPRITES ; i++) {
     if (!binocle_ecs_create_entity(&ecs, &entities[i])) {
       binocle_log_error("Cannot create entity");
@@ -251,11 +299,11 @@ int main(int argc, char *argv[])
   }
 
   char font_filename[1024];
-  sprintf(font_filename, "%s%s", BINOCLE_DATA_DIR, "font.fnt");
+  sprintf(font_filename, "%s%s", binocle_data_dir, "font.fnt");
   font = binocle_bitmapfont_from_file(font_filename, true);
 
   char font_image_filename[1024];
-  sprintf(font_image_filename, "%s%s", BINOCLE_DATA_DIR, "font.png");
+  sprintf(font_image_filename, "%s%s", binocle_data_dir, "font.png");
   font_image = binocle_image_load(font_image_filename);
   font_texture = binocle_texture_from_image(font_image);
   font_material = binocle_material_new();
