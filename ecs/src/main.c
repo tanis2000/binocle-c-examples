@@ -44,7 +44,7 @@ typedef struct physics_component_t {
 } physics_component_t;
 
 typedef struct render_component_t {
-  binocle_sprite sprite;
+  binocle_sprite *sprite;
 } render_component_t;
 
 typedef struct player_component_t {
@@ -77,6 +77,7 @@ binocle_system_id_t player_system_id;
 uint64_t last_fps;
 float frame_counter;
 char *binocle_data_dir = NULL;
+binocle_sprite shared_sprite;
 
 void update_entity(binocle_entity_id_t entity, float dt) {
   //binocle_log_info("Processing movement entity %lld", entity);
@@ -128,7 +129,7 @@ void process_rendering(binocle_ecs_t *ecs, void *user_data, binocle_entity_id_t 
     binocle_log_error("process_rendering(): physics or render components are NULL for entity %lld", entity);
     return;
   }
-  binocle_sprite_batch_draw(&sprite_batch, render->sprite.material->texture, &physics->pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
+  binocle_sprite_batch_draw(&sprite_batch, render->sprite->material->texture, &physics->pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
 }
 
 void process_player(binocle_ecs_t *ecs, void *user_data, binocle_entity_id_t entity, float delta) {
@@ -235,6 +236,7 @@ int main(int argc, char *argv[])
   binocle_material material = binocle_material_new();
   material.texture = &texture;
   material.shader = &shader;
+  shared_sprite = binocle_sprite_from_material(&material);
 
   ecs = binocle_ecs_new();
   if (!binocle_ecs_create_component(&ecs, "physics", sizeof(physics_component_t), &physics_component_id)) {
@@ -284,7 +286,7 @@ int main(int argc, char *argv[])
         binocle_log_error("Cannot set physics component for entity %lld", entities[i]);
       }
       render_component_t r = {0};
-      r.sprite = binocle_sprite_from_material(&material);
+      r.sprite = &shared_sprite;
       if (!binocle_ecs_set_component(&ecs, entities[i], render_component_id, &r)) {
         binocle_log_error("Cannot set render component for entity %lld", entities[i]);
       }
