@@ -6,6 +6,7 @@ This is a collection of example projects for Binocle C.
 
 | Folder      | Description                                                        |
 |-------------|:-------------------------------------------------------------------|
+| ecs         | Entity Component System                                            |
 | spatialhash | Collision detection using 2D spatial hash for braodphase detection |
 | spritebatch | Sprite batching                                                    |
 
