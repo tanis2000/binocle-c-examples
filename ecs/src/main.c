@@ -35,7 +35,7 @@
 #define DESIGN_WIDTH 320
 #define DESIGN_HEIGHT 240
 #endif // defined(__IPHONEOS__)
-#define MAX_SPRITES 50000
+#define MAX_SPRITES 100
 
 typedef struct physics_component_t {
   kmVec2 pos;

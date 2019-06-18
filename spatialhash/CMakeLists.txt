@@ -35,11 +35,7 @@ SET(VERSION_MINOR "1")
 SET(VERSION_PATCH "0")
 SET(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
-set(BINOCLE_LINK_LIBRARIES binocle flac freetype vorbis ogg kazmath rxi_map)
-
-if (NOT EMSCRIPTEN)
-	set(BINOCLE_LINK_LIBRARIES ${BINOCLE_LINK_LIBRARIES} sdl zlib)
-endif()
+set(BINOCLE_LINK_LIBRARIES binocle-static)
 
 if (MSVC)
 	message("Including Windows defines")
