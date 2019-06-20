@@ -72,15 +72,15 @@ void main_loop() {
   }
 
 
-  if (binocle_input_is_key_pressed(input, KEY_RIGHT)) {
+  if (binocle_input_is_key_pressed(&input, KEY_RIGHT)) {
     player_pos.x += 50 * (1.0/window.frame_time);
-  } else if (binocle_input_is_key_pressed(input, KEY_LEFT)) {
+  } else if (binocle_input_is_key_pressed(&input, KEY_LEFT)) {
     player_pos.x -= 50 * (1.0/window.frame_time);
   }
 
-  if (binocle_input_is_key_pressed(input, KEY_UP)) {
+  if (binocle_input_is_key_pressed(&input, KEY_UP)) {
     player_pos.y += 50 * (1.0/window.frame_time);
-  } else if (binocle_input_is_key_pressed(input, KEY_DOWN)) {
+  } else if (binocle_input_is_key_pressed(&input, KEY_DOWN)) {
     player_pos.y -= 50 * (1.0/window.frame_time);
   }
 
@@ -98,8 +98,8 @@ void main_loop() {
   scale.y = 1.0f;
   kmMat4 view_matrix;
   kmMat4Identity(&view_matrix);
-  binocle_sprite_draw(player, &gd, (uint64_t)player_pos.x, (uint64_t)player_pos.y, adapter.viewport, 0, scale, &camera);
-  binocle_sprite_draw(enemy, &gd, (uint64_t)enemy_pos.x, (uint64_t)enemy_pos.y, adapter.viewport, 0, scale, &camera);
+  binocle_sprite_draw(&player, &gd, (uint64_t)player_pos.x, (uint64_t)player_pos.y, &adapter.viewport, 0, &scale, &camera);
+  binocle_sprite_draw(&enemy, &gd, (uint64_t)enemy_pos.x, (uint64_t)enemy_pos.y, &adapter.viewport, 0, &scale, &camera);
 
 #if defined(HITBOX_PLAYER) && defined(HITBOX_ENEMY)
   bool collides = binocle_collide_hitbox_to_hitbox(&player_hitbox, &enemy_hitbox);

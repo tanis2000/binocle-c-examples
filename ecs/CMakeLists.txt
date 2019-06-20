@@ -69,6 +69,9 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/sdl/include
     ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/sdl_mixer
     ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/stb_image
+    ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/luajit/src
+    ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/physfs
+    ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/sokol
     ${PROJECT_SOURCE_DIR}/../binocle-c/src/binocle/core
 )
 
