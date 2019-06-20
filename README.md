@@ -1,6 +1,6 @@
 # Binocle C examples
 
-This is a collection of example projects for Binocle C.
+This is a collection of example projects for [Binocle C](https://github.com/tanis2000/binocle-c).
 
 ## Repository content
 
