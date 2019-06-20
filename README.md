@@ -7,6 +7,7 @@ This is a collection of example projects for [Binocle C](https://github.com/tani
 | Folder      | Description                                                        |
 |-------------|:-------------------------------------------------------------------|
 | ecs         | Entity Component System                                            |
+| lua         | Lua binding example (uses FFI)                                     |
 | spatialhash | Collision detection using 2D spatial hash for braodphase detection |
 | spritebatch | Sprite batching                                                    |
 
