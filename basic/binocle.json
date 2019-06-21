@@ -1,0 +1,6 @@
+{
+    "project": {
+        "name": "basic",
+        "engine": "binocle-c"
+    }
+}
