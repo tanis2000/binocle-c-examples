@@ -83,13 +83,13 @@ mat4 inverse(mat4 m) {
 }
 
 void main(void) {
-    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(vertexPosition, 1.0);
     tcoord = vertexTCoord;
     color = vertexColor;
     position = vec3(modelMatrix * vec4(vertexPosition, 1.0));
     mat3 modelMatrix3 = mat3(modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz);
     mat3 normalMatrix = transpose(inverse(modelMatrix3));
-    normal = normalize(normalMatrix * vertexNormal);
+    normal = (normalMatrix * vertexNormal);
     gl_PointSize = 1.0;
+    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(vertexPosition, 1.0);
 }
 

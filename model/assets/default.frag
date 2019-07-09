@@ -61,17 +61,17 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 
 void main(void) {
-/*
+    /*
     vec4 texcolor = texture2D(tex0, tcoord);
     vec3 ambient = vec3(0.5, 0.5, 0.5);
     gl_FragColor = vec4(ambient, 1.0) * color * texcolor;
-*/
+    */
 
     /*
     vec4 texcolor = texture2D(material.diffuse, tcoord);
     vec3 ambient = vec3(0.5, 0.5, 0.5);
     gl_FragColor = vec4(ambient, 1.0) * color * texcolor;
-q   */
+    */
 
     // properties
     vec3 norm = normalize(normal);
@@ -84,10 +84,12 @@ q   */
     // this fragment's final color.
     // == =====================================================
     // phase 1: directional lighting
+    //vec3 result = vec3(0.0,0.0,0.0);
     vec3 result = CalcDirLight(dirLight, norm, viewDir);
     // phase 2: point lights
-    //for(int i = 0; i < NR_POINT_LIGHTS; i++)
-    //    result += CalcPointLight(pointLights[i], norm, position, viewDir);
+    for(int i = 0; i < NR_POINT_LIGHTS; i++) {
+        result += CalcPointLight(pointLights[i], norm, position, viewDir);
+    }
     // phase 3: spot light
     result += CalcSpotLight(spotLight, norm, position, viewDir);
     gl_FragColor = vec4(result, 1.0);

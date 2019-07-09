@@ -11,7 +11,6 @@
 #include "binocle_color.h"
 #include "binocle_window.h"
 #include "binocle_game.h"
-#include "binocle_viewport_adapter.h"
 #include "binocle_camera.h"
 #include <binocle_input.h>
 #include <binocle_image.h>
@@ -34,16 +33,30 @@
 
 binocle_window window;
 binocle_input input;
-binocle_viewport_adapter adapter;
 binocle_camera_3d camera;
 binocle_gd gd;
 binocle_shader shader;
+binocle_shader lamp_shader;
 char *binocle_data_dir = NULL;
 binocle_app app;
-binocle_image image;
-binocle_texture texture;
+binocle_image diffuse_image;
+binocle_image specular_image;
+binocle_texture diffuse_texture;
+binocle_texture specular_texture;
 binocle_sprite sprite;
 binocle_model model;
+static kmVec3 pointLightPositions[] = {
+  /*
+  {.x = 0.7f, .y = 0.2f,  .z = 2.0f},
+  {.x = 2.3f, .y = -3.3f, .z = -4.0f},
+  {.x = -4.0f, .y = 2.0f, .z = -12.0f},
+  {.x = 0.0f, .y= 0.0f, .z = -3.0f}
+   */
+  {.x = -5.0f, .y = 0.0f, .z = 0.0f}, // left
+  {.x = 5.0f, .y = 0.0f, .z = 0.0f}, // right
+  {.x = 0.0f, .y = 0.0f, .z = 5.0f}, // front
+  {.x = 0.0f, .y = 0.0f, .z = -5.0f} // back
+};
 
 void setup_lights() {
   binocle_gd_apply_shader(&gd, shader);
@@ -77,46 +90,62 @@ void setup_lights() {
     binocle_gd_set_uniform_vec3(shader, "dirLight.diffuse", diffuse);
     binocle_gd_set_uniform_vec3(shader, "dirLight.specular", specular);
   }
-  /*
-  // point light 1
-  binocle_gd_set_uniform_vec3(shader, "pointLights[0].position", pointLightPositions[0]);
-  binocle_gd_set_uniform_vec3(shader, "pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
-  binocle_gd_set_uniform_vec3(shader, "pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
-  binocle_gd_set_uniform_vec3(shader, "pointLights[0].specular", 1.0f, 1.0f, 1.0f);
-  binocle_gd_set_uniform_float(shader, "pointLights[0].constant", 1.0f);
-  binocle_gd_set_uniform_float(shader, "pointLights[0].linear", 0.09);
-  binocle_gd_set_uniform_float(shader, "pointLights[0].quadratic", 0.032);
-  // point light 2
-  binocle_gd_set_uniform_vec3(shader, "pointLights[1].position", pointLightPositions[1]);
-  binocle_gd_set_uniform_vec3(shader, "pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
-  binocle_gd_set_uniform_vec3(shader, "pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
-  binocle_gd_set_uniform_vec3(shader, "pointLights[1].specular", 1.0f, 1.0f, 1.0f);
-  binocle_gd_set_uniform_float(shader, "pointLights[1].constant", 1.0f);
-  binocle_gd_set_uniform_float(shader, "pointLights[1].linear", 0.09);
-  binocle_gd_set_uniform_float(shader, "pointLights[1].quadratic", 0.032);
-  // point light 3
-  binocle_gd_set_uniform_vec3(shader, "pointLights[2].position", pointLightPositions[2]);
-  binocle_gd_set_uniform_vec3(shader, "pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
-  binocle_gd_set_uniform_vec3(shader, "pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
-  binocle_gd_set_uniform_vec3(shader, "pointLights[2].specular", 1.0f, 1.0f, 1.0f);
-  binocle_gd_set_uniform_float(shader, "pointLights[2].constant", 1.0f);
-  binocle_gd_set_uniform_float(shader, "pointLights[2].linear", 0.09);
-  binocle_gd_set_uniform_float(shader, "pointLights[2].quadratic", 0.032);
-  // point light 4
-  binocle_gd_set_uniform_vec3(shader, "pointLights[3].position", pointLightPositions[3]);
-  binocle_gd_set_uniform_vec3(shader, "pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
-  binocle_gd_set_uniform_vec3(shader, "pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
-  binocle_gd_set_uniform_vec3(shader, "pointLights[3].specular", 1.0f, 1.0f, 1.0f);
-  binocle_gd_set_uniform_float(shader, "pointLights[3].constant", 1.0f);
-  binocle_gd_set_uniform_float(shader, "pointLights[3].linear", 0.09);
-  binocle_gd_set_uniform_float(shader, "pointLights[3].quadratic", 0.032);
-   */
+  {
+    // point light 1
+    kmVec3 ambient = {.x = 0.05f, .y = 0.05f, .z = 0.05f};
+    kmVec3 diffuse = {.x = 0.8f, .y = 0.8f, .z = 0.8f};
+    kmVec3 specular = {.x = 1.0f, .y = 1.0f, .z = 1.0f};
+    binocle_gd_set_uniform_vec3(shader, "pointLights[0].position", pointLightPositions[0]);
+    binocle_gd_set_uniform_vec3(shader, "pointLights[0].ambient", ambient);
+    binocle_gd_set_uniform_vec3(shader, "pointLights[0].diffuse", diffuse);
+    binocle_gd_set_uniform_vec3(shader, "pointLights[0].specular", specular);
+    binocle_gd_set_uniform_float(shader, "pointLights[0].constant", 1.0f);
+    binocle_gd_set_uniform_float(shader, "pointLights[0].linear", 0.09);
+    binocle_gd_set_uniform_float(shader, "pointLights[0].quadratic", 0.032);
+  }
+  {
+    // point light 2
+    kmVec3 ambient = {.x = 0.05f, .y = 0.05f, .z = 0.05f};
+    kmVec3 diffuse = {.x = 0.8f, .y = 0.8f, .z = 0.8f};
+    kmVec3 specular = {.x = 1.0f, .y = 1.0f, .z = 1.0f};
+    binocle_gd_set_uniform_vec3(shader, "pointLights[1].position", pointLightPositions[1]);
+    binocle_gd_set_uniform_vec3(shader, "pointLights[1].ambient", ambient);
+    binocle_gd_set_uniform_vec3(shader, "pointLights[1].diffuse", diffuse);
+    binocle_gd_set_uniform_vec3(shader, "pointLights[1].specular", specular);
+    binocle_gd_set_uniform_float(shader, "pointLights[1].constant", 1.0f);
+    binocle_gd_set_uniform_float(shader, "pointLights[1].linear", 0.09);
+    binocle_gd_set_uniform_float(shader, "pointLights[1].quadratic", 0.032);
+  }
+  {
+    // point light 3
+    kmVec3 ambient = {.x = 0.05f, .y = 0.05f, .z = 0.05f};
+    kmVec3 diffuse = {.x = 0.8f, .y = 0.8f, .z = 0.8f};
+    kmVec3 specular = {.x = 1.0f, .y = 1.0f, .z = 1.0f};
+    binocle_gd_set_uniform_vec3(shader, "pointLights[2].position", pointLightPositions[2]);
+    binocle_gd_set_uniform_vec3(shader, "pointLights[2].ambient", ambient);
+    binocle_gd_set_uniform_vec3(shader, "pointLights[2].diffuse", diffuse);
+    binocle_gd_set_uniform_vec3(shader, "pointLights[2].specular", specular);
+    binocle_gd_set_uniform_float(shader, "pointLights[2].constant", 1.0f);
+    binocle_gd_set_uniform_float(shader, "pointLights[2].linear", 0.09f);
+    binocle_gd_set_uniform_float(shader, "pointLights[2].quadratic", 0.032);
+  }
+  {
+    // point light 4
+    kmVec3 ambient = {.x = 0.05f, .y = 0.05f, .z = 0.05f};
+    kmVec3 diffuse = {.x = 0.8f, .y = 0.8f, .z = 0.8f};
+    kmVec3 specular = {.x = 1.0f, .y = 1.0f, .z = 1.0f};
+    binocle_gd_set_uniform_vec3(shader, "pointLights[3].position", pointLightPositions[3]);
+    binocle_gd_set_uniform_vec3(shader, "pointLights[3].ambient", ambient);
+    binocle_gd_set_uniform_vec3(shader, "pointLights[3].diffuse", diffuse);
+    binocle_gd_set_uniform_vec3(shader, "pointLights[3].specular", specular);
+    binocle_gd_set_uniform_float(shader, "pointLights[3].constant", 1.0f);
+    binocle_gd_set_uniform_float(shader, "pointLights[3].linear", 0.09);
+    binocle_gd_set_uniform_float(shader, "pointLights[3].quadratic", 0.032);
+  }
   // spotLight
   {
-    kmVec3 forward;
-    kmMat4GetForwardVec3RH(&forward, binocle_camera_3d_get_transform_matrix(&camera));
     binocle_gd_set_uniform_vec3(shader, "spotLight.position", camera.position);
-    binocle_gd_set_uniform_vec3(shader, "spotLight.direction", forward);
+    binocle_gd_set_uniform_vec3(shader, "spotLight.direction", camera.front);
     kmVec3 ambient;
     ambient.x = 0.0f;
     ambient.y = 0.0f;
@@ -132,24 +161,100 @@ void setup_lights() {
     binocle_gd_set_uniform_vec3(shader, "spotLight.ambient", ambient);
     binocle_gd_set_uniform_vec3(shader, "spotLight.diffuse", diffuse);
     binocle_gd_set_uniform_vec3(shader, "spotLight.specular", specular);
-    binocle_gd_set_uniform_float(shader, "spotLight.constant", 10.0f);
+    binocle_gd_set_uniform_float(shader, "spotLight.constant", 1.0f);
     binocle_gd_set_uniform_float(shader, "spotLight.linear", 0.09f);
     binocle_gd_set_uniform_float(shader, "spotLight.quadratic", 0.032f);
     binocle_gd_set_uniform_float(shader, "spotLight.cutOff", cosf(kmDegreesToRadians(12.5f)));
     binocle_gd_set_uniform_float(shader, "spotLight.outerCutOff", cosf(kmDegreesToRadians(15.0f)));
   }
-  /*
-  binocle_gd_set_uniform_float(dof_shader, "time", running_time);
-  binocle_gd_set_uniform_float2(dof_shader, "resolution", window.width, window.height);
-  binocle_gd_set_uniform_float2(dof_shader, "uv", 1.0, 1.0);
-  binocle_gd_set_uniform_render_target_as_texture(dof_shader, "tInput", g_buffer);
-  binocle_gd_set_uniform_render_target_as_texture(dof_shader, "tBias", g_buffer);
-  binocle_gd_set_uniform_float(dof_shader, "radius", 0.5);
-  binocle_gd_set_uniform_float(dof_shader, "amount", 1.0);
-  binocle_gd_set_uniform_float(dof_shader, "focalDistance", 2.0);
-  binocle_gd_set_uniform_float(dof_shader, "aperture", 2.0);
-  binocle_gd_draw_quad(dof_shader);
-   */
+}
+
+void draw_light(kmVec3 position, kmAABB2 viewport) {
+  static GLfloat g_quad_vertex_buffer_data[] = {
+    0.5f, -0.5f, -0.5f,
+    0.5f, -0.5f, 0.5f,
+    -0.5f, -0.5f, 0.5f,
+    -0.5f, -0.5f, -0.5f,
+    0.5f, 0.5f, -0.5f,
+    0.5f, 0.5f, 0.5f,
+    -0.5f, 0.5f, 0.5f,
+    -0.5f, 0.5f, -0.5f
+  };
+
+  static const GLuint index_buffer_data[] = {
+    0, 1, 2,
+    0, 2, 3,
+    4, 7, 6,
+    4, 6, 5,
+    0, 4, 5,
+    0, 5, 1,
+    1, 5, 6,
+    1, 6, 2,
+    2, 6, 7,
+    2, 7, 3,
+    4, 0, 3,
+    4, 3, 7
+  };
+
+  kmMat4 projectionMatrix;
+  kmMat4Identity(&projectionMatrix);
+  kmMat4PerspectiveProjection(&projectionMatrix, camera.fov_y, viewport.max.x / viewport.max.y, camera.near /*camera.near + camera.position.z*/, camera.far /*camera.position.z + camera.far*/);
+
+  kmMat4 viewMatrix;
+  kmMat4Identity(&viewMatrix);
+  kmMat4Multiply(&viewMatrix, &viewMatrix, binocle_camera_3d_get_transform_matrix(&camera));
+
+  kmMat4 modelMatrix;
+  kmMat4Identity(&modelMatrix);
+
+  kmMat4 scale;
+  kmMat4Scaling(&scale, 0.2f, 0.2f, 0.2f);
+  kmMat4Multiply(&modelMatrix, &modelMatrix, &scale);
+
+  kmMat4 trans;
+  kmMat4Translation(&trans, position.x, position.y, position.z);
+  kmMat4Multiply(&modelMatrix, &modelMatrix, &trans);
+
+
+/*
+  kmMat4 rot_x;
+  kmMat4 rot_y;
+  kmMat4 rot_z;
+  kmMat4RotationX(&rot_x, 1);
+  kmMat4RotationY(&rot_y, 1);
+  kmMat4RotationZ(&rot_z, 1);
+  kmMat4Multiply(&modelMatrix, &modelMatrix, &rot_x);
+  kmMat4Multiply(&modelMatrix, &modelMatrix, &rot_y);
+  kmMat4Multiply(&modelMatrix, &modelMatrix, &rot_z);
+*/
+
+
+
+  GLuint quad_vertexbuffer;
+  glCheck(glGenBuffers(1, &quad_vertexbuffer));
+  glCheck(glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer));
+  glCheck(glBufferData(GL_ARRAY_BUFFER, sizeof(g_quad_vertex_buffer_data), g_quad_vertex_buffer_data, GL_STATIC_DRAW));
+
+  GLint pos_id;
+  glCheck(pos_id = glGetAttribLocation(lamp_shader.program_id, "vertexPosition"));
+  glCheck(glVertexAttribPointer(pos_id, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 3, 0));
+  glCheck(glEnableVertexAttribArray(pos_id));
+
+  binocle_gd_set_uniform_mat4(lamp_shader, "projectionMatrix", projectionMatrix);
+  binocle_gd_set_uniform_mat4(lamp_shader, "viewMatrix", viewMatrix);
+  binocle_gd_set_uniform_mat4(lamp_shader, "modelMatrix", modelMatrix);
+
+  GLuint quad_indexbuffer;
+  glCheck(glGenBuffers(1, &quad_indexbuffer));
+  glCheck(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, quad_indexbuffer));
+  glCheck(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_buffer_data), index_buffer_data, GL_STATIC_DRAW));
+  glCheck(glDrawElements(GL_TRIANGLES, 12 * 3, GL_UNSIGNED_INT, 0));
+
+  glCheck(glDisableVertexAttribArray(pos_id));
+  glCheck(glBindBuffer(GL_ARRAY_BUFFER, 0));
+  glCheck(glDeleteBuffers(1, &quad_vertexbuffer));
+  glCheck(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+  glCheck(glDeleteBuffers(1, &quad_indexbuffer));
 }
 
 void main_loop() {
@@ -162,7 +267,6 @@ void main_loop() {
     kmVec2 oldWindowSize = {.x = window.width, .y = window.height};
     window.width = input.newWindowSize.x;
     window.height = input.newWindowSize.y;
-    binocle_viewport_adapter_reset(&adapter, oldWindowSize, input.newWindowSize);
     input.resized = false;
   }
 
@@ -173,9 +277,9 @@ void main_loop() {
   }
 
   if (binocle_input_is_key_pressed(&input, KEY_W)) {
-    binocle_camera_3d_translate(&camera, 0.0f, 0.0f, 30.0f * dt);
-  } else if (binocle_input_is_key_pressed(&input, KEY_S)) {
     binocle_camera_3d_translate(&camera, 0.0f, 0.0f, -30.0f * dt);
+  } else if (binocle_input_is_key_pressed(&input, KEY_S)) {
+    binocle_camera_3d_translate(&camera, 0.0f, 0.0f, 30.0f * dt);
   }
 
   if (binocle_input_is_key_pressed(&input, KEY_R)) {
@@ -185,22 +289,25 @@ void main_loop() {
   }
 
   if (binocle_input_is_key_pressed(&input, KEY_E)) {
-    binocle_camera_3d_rotate(&camera, 0.0f, 1.0 * dt, 0.0f);
+    binocle_camera_3d_rotate(&camera, 0.0f, 30.0 * dt, 0.0f);
   } else if (binocle_input_is_key_pressed(&input, KEY_Q)) {
-    binocle_camera_3d_rotate(&camera, 0.0f, -1.0 * dt, 0.0f);
+    binocle_camera_3d_rotate(&camera, 0.0f, -30.0 * dt, 0.0f);
   }
 
-  binocle_window_set_background_color(&window, binocle_color_azure());
+  if (binocle_input_is_key_pressed(&input, KEY_T)) {
+    binocle_camera_3d_rotate(&camera, 30.0 * dt, 0.0f, 0.0f);
+  } else if (binocle_input_is_key_pressed(&input, KEY_G)) {
+    binocle_camera_3d_rotate(&camera, -30.0 * dt, 0.0f, 0.0f);
+  }
+
   binocle_gd_clear(binocle_color_black());
 
-  kmVec2 scale;
-  scale.x = 0.3f;
-  scale.y = 0.3f;
   kmAABB2 viewport;
   viewport.min.x = 0;
   viewport.min.y = 0;
   viewport.max.x = window.width;
   viewport.max.y = window.height;
+
   binocle_gd_apply_viewport(viewport);
   binocle_gd_apply_shader(&gd, shader);
   //binocle_gd_draw_test_triangle(shader);
@@ -211,11 +318,20 @@ void main_loop() {
   kmMat4RotationX(&rot_x, 0.3f * dt);
   kmMat4RotationY(&rot_y, 0.3f * dt);
   kmMat4RotationZ(&rot_z, 0.3f * dt);
-  kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &rot_x);
-  kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &rot_y);
-  kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &rot_z);
+  //kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &rot_x);
+  //kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &rot_y);
+  //kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &rot_z);
+  kmMat4 trans;
+  kmMat4Translation(&trans, 0.1f * dt, 0.0f, 0.0f);
+  //kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &trans);
   setup_lights();
+  kmMat4Identity(&model.meshes[0].transform);
   binocle_gd_draw_mesh(&gd, &model.meshes[0], viewport, &camera);
+
+  binocle_gd_apply_shader(&gd, lamp_shader);
+  for (int i = 0 ; i < 4 ; i++) {
+    draw_light(pointLightPositions[i], viewport);
+  }
 
   binocle_window_refresh(&window);
   binocle_window_end_frame(&window);
@@ -228,18 +344,14 @@ int main(int argc, char *argv[])
 
   binocle_data_dir = binocle_sdl_assets_dir();
 
-  window = binocle_window_new(DESIGN_WIDTH, DESIGN_HEIGHT, "Binocle Basic Example");
+  window = binocle_window_new(DESIGN_WIDTH, DESIGN_HEIGHT, "Binocle 3D Model Example");
   binocle_window_set_background_color(&window, binocle_color_white());
-  adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING, BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window.original_width, window.original_height, window.original_width, window.original_height);
   kmVec3 camera_pos;
   camera_pos.x = 0;
   camera_pos.y = 0;
-  camera_pos.z = -500.0f;
-  kmVec3 camera_rot;
-  camera_rot.x = 0;
-  camera_rot.y = 0;
-  camera_rot.z = 0;
-  camera = binocle_camera_3d_new(camera_pos, camera_rot, 100.0f, 50000.0f, kmDegreesToRadians(45));
+  camera_pos.z = 3.0f;
+  camera = binocle_camera_3d_new(camera_pos, 0.3f, 1000.0f, 60);
+  //binocle_camera_3d_set_rotation(&camera, 0, -90, 0);
   input = binocle_input_new();
   binocle_shader_init_defaults();
 
@@ -249,15 +361,30 @@ int main(int argc, char *argv[])
   sprintf(frag, "%s%s", binocle_data_dir, "default.frag");
   shader = binocle_shader_load_from_file(vert, frag);
 
-  char filename[1024];
-  sprintf(filename, "%s%s", binocle_data_dir, "chr_knight.model");
-  model = binocle_model_load_obj(filename);
+  sprintf(vert, "%s%s", binocle_data_dir, "lamp.vert");
+  sprintf(frag, "%s%s", binocle_data_dir, "lamp.frag");
+  lamp_shader = binocle_shader_load_from_file(vert, frag);
 
-  sprintf(filename, "%s%s", binocle_data_dir, "chr_knight.png");
-  image = binocle_image_load(filename);
-  texture = binocle_texture_from_image(image);
-  model.meshes[0].material->texture = &texture;
+  char filename[1024];
+  sprintf(filename, "%s%s", binocle_data_dir, "cube2.model");
+  model = binocle_model_load_obj(filename);
+  /*
+  kmMat4 scale;
+  kmMat4Scaling(&scale, 0.000005f, 0.000005f, 0.000005f);
+  kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &scale);
+   */
+
+
+  sprintf(filename, "%s%s", binocle_data_dir, "container2.png");
+  diffuse_image = binocle_image_load(filename);
+  diffuse_texture = binocle_texture_from_image(diffuse_image);
+  model.meshes[0].material->texture = &diffuse_texture;
   model.meshes[0].material->shader = &shader;
+
+  sprintf(filename, "%s%s", binocle_data_dir, "container2_specular.png");
+  specular_image = binocle_image_load(filename);
+  specular_texture = binocle_texture_from_image(specular_image);
+  model.meshes[0].material->specular_texture = &specular_texture;
 
   gd = binocle_gd_new();
   binocle_gd_init(&gd);
