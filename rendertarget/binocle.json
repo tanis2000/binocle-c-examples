@@ -1,0 +1,6 @@
+{
+    "project": {
+        "name": "rendertarget",
+        "engine": "binocle-c"
+    }
+}
