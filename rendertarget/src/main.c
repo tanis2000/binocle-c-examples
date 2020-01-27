@@ -29,8 +29,8 @@
 #include "binocle_ecs.h"
 #include "binocle_app.h"
 
-#define DESIGN_WIDTH 800
-#define DESIGN_HEIGHT 600
+#define DESIGN_WIDTH 504
+#define DESIGN_HEIGHT 143
 
 binocle_window window;
 binocle_input input;
@@ -54,13 +54,18 @@ void main_loop() {
   binocle_input_update(&input);
 
   if (input.resized) {
+    kmVec2 oldWindowSize;
+    oldWindowSize.x = window.width;
+    oldWindowSize.y = window.height;
     window.width = input.newWindowSize.x;
     window.height = input.newWindowSize.y;
+    // Update the pixel-perfect rescaling viewport adapter
+    binocle_viewport_adapter_reset(camera.viewport_adapter, oldWindowSize, input.newWindowSize);
     input.resized = false;
   }
 
   // Set the render target we will draw to
-  binocle_gd_set_render_target(render_target);
+  binocle_gd_set_render_target(&render_target);
 
   // Clear the render target with red color
   binocle_window_clear(&window);
@@ -88,23 +93,20 @@ void main_loop() {
   // Draw the logo to the render target
   binocle_sprite_draw(&sprite, &gd, x, y, &viewport, 0, &scale, &camera);
 
-  // Create a viewport that corresponds to the size of the window we want to blit to
-  kmAABB2 window_viewport;
-  window_viewport.min.x = 0;
-  window_viewport.min.y = 0;
-  window_viewport.max.x = window.width;
-  window_viewport.max.y = window.height;
-
-  float vp_x = (window.width - (float)DESIGN_WIDTH) / 2.0f;
-  float vp_y = (window.height - (float)DESIGN_HEIGHT) / 2.0f;
-  binocle_gd_clear_render_target();
+  // Gets the viewport calculated by the adapter
+  kmAABB2 vp = binocle_viewport_adapter_get_viewport(adapter);
+  float vp_x = vp.min.x;
+  float vp_y = vp.min.y;
+  // Reset the render target to the screen
+  binocle_gd_set_render_target(NULL);
+  // Clear the screen with an azure
   binocle_gd_clear(binocle_color_azure());
-  binocle_gd_apply_viewport(window_viewport);
+  binocle_gd_apply_viewport(vp);
   binocle_gd_apply_shader(&gd, screen_shader);
   binocle_gd_set_uniform_float2(screen_shader, "resolution", DESIGN_WIDTH,
                                 DESIGN_HEIGHT);
   binocle_gd_set_uniform_mat4(screen_shader, "transform", identity_matrix);
-  binocle_gd_set_uniform_float2(screen_shader, "scale", 1.0f, 1.0f);
+  binocle_gd_set_uniform_float2(screen_shader, "scale", adapter.inverse_multiplier, adapter.inverse_multiplier);
   binocle_gd_set_uniform_float2(screen_shader, "viewport", vp_x, vp_y);
   binocle_gd_draw_quad_to_screen(screen_shader, render_target);
 
@@ -121,6 +123,7 @@ int main(int argc, char *argv[])
 
   window = binocle_window_new(DESIGN_WIDTH, DESIGN_HEIGHT, "Binocle Render Target Example");
   binocle_window_set_background_color(&window, binocle_color_red());
+  binocle_window_set_minimum_size(&window, DESIGN_WIDTH, DESIGN_HEIGHT);
   adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING, BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window.original_width, window.original_height, window.original_width, window.original_height);
   camera = binocle_camera_new(&adapter);
   input = binocle_input_new();
