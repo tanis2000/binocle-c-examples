@@ -39,18 +39,19 @@
 #endif // defined(__IPHONEOS__)
 
 binocle_window window;
-binocle_input input;
+binocle_input input
+;
 binocle_viewport_adapter adapter;
 binocle_camera camera;
 binocle_gd gd;
 binocle_bitmapfont *font;
-binocle_image font_image;
-binocle_texture font_texture;
-binocle_material font_material;
-binocle_sprite font_sprite;
+binocle_image *font_image;
+binocle_texture *font_texture;
+binocle_material *font_material;
+binocle_sprite *font_sprite;
 kmVec2 font_sprite_pos;
 binocle_sprite_batch sprite_batch;
-binocle_shader shader;
+binocle_shader *shader;
 uint64_t last_fps;
 float frame_counter;
 char *binocle_data_dir = NULL;
@@ -71,7 +72,7 @@ int lua_set_globals() {
   lua_setglobal(lua.L, "camera");
 
   lua_pushlightuserdata(lua.L, (void *)&input);
-  lua_setglobal(lua.L, "input");
+  lua_setglobal(lua.L, "input_mgr");
 
   return 0;
 }
@@ -103,7 +104,7 @@ void main_loop() {
 
   kmMat4 matrix;
   kmMat4Identity(&matrix);
-  binocle_sprite_batch_begin(&sprite_batch, binocle_camera_get_viewport(camera), BINOCLE_SPRITE_SORT_MODE_DEFERRED, &shader, &matrix);
+  binocle_sprite_batch_begin(&sprite_batch, binocle_camera_get_viewport(camera), BINOCLE_SPRITE_SORT_MODE_DEFERRED, shader, &matrix);
 
   binocle_window_clear(&window);
 
@@ -158,10 +159,10 @@ int main(int argc, char *argv[])
   font_image = binocle_image_load(font_image_filename);
   font_texture = binocle_texture_from_image(font_image);
   font_material = binocle_material_new();
-  font_material.texture = &font_texture;
-  font_material.shader = &shader;
-  font->material = &font_material;
-  font_sprite = binocle_sprite_from_material(&font_material);
+  font_material->texture = font_texture;
+  font_material->shader = shader;
+  font->material = font_material;
+  font_sprite = binocle_sprite_from_material(font_material);
   font_sprite_pos.x = 0;
   font_sprite_pos.y = -256;
 
