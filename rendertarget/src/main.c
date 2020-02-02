@@ -37,15 +37,15 @@ binocle_input input;
 binocle_viewport_adapter adapter;
 binocle_camera camera;
 binocle_gd gd;
-binocle_shader shader;
+binocle_shader *shader;
 char *binocle_data_dir = NULL;
 binocle_app app;
-binocle_image image;
-binocle_texture texture;
-binocle_sprite sprite;
-binocle_material material;
+binocle_image *image;
+binocle_texture *texture;
+binocle_sprite *sprite;
+binocle_material *material;
 binocle_render_target render_target;
-binocle_shader screen_shader;
+binocle_shader *screen_shader;
 
 void main_loop() {
   binocle_window_begin_frame(&window);
@@ -87,11 +87,11 @@ void main_loop() {
   kmMat4Identity(&identity_matrix);
 
   // Center the logo in the render target
-  uint64_t x = (uint64_t)((DESIGN_WIDTH - (sprite.material->texture->width * scale.x)) / 2.0f);
-  uint64_t y = (uint64_t)((DESIGN_HEIGHT - (sprite.material->texture->height * scale.x)) / 2.0f);
+  uint64_t x = (uint64_t)((DESIGN_WIDTH - (sprite->material->texture->width * scale.x)) / 2.0f);
+  uint64_t y = (uint64_t)((DESIGN_HEIGHT - (sprite->material->texture->height * scale.x)) / 2.0f);
 
   // Draw the logo to the render target
-  binocle_sprite_draw(&sprite, &gd, x, y, &viewport, 0, &scale, &camera);
+  binocle_sprite_draw(sprite, &gd, x, y, &viewport, 0, &scale, &camera);
 
   // Gets the viewport calculated by the adapter
   kmAABB2 vp = binocle_viewport_adapter_get_viewport(adapter);
@@ -102,13 +102,13 @@ void main_loop() {
   // Clear the screen with an azure
   binocle_gd_clear(binocle_color_azure());
   binocle_gd_apply_viewport(vp);
-  binocle_gd_apply_shader(&gd, screen_shader);
-  binocle_gd_set_uniform_float2(screen_shader, "resolution", DESIGN_WIDTH,
+  binocle_gd_apply_shader(&gd, *screen_shader);
+  binocle_gd_set_uniform_float2(*screen_shader, "resolution", DESIGN_WIDTH,
                                 DESIGN_HEIGHT);
-  binocle_gd_set_uniform_mat4(screen_shader, "transform", identity_matrix);
-  binocle_gd_set_uniform_float2(screen_shader, "scale", adapter.inverse_multiplier, adapter.inverse_multiplier);
-  binocle_gd_set_uniform_float2(screen_shader, "viewport", vp_x, vp_y);
-  binocle_gd_draw_quad_to_screen(screen_shader, render_target);
+  binocle_gd_set_uniform_mat4(*screen_shader, "transform", identity_matrix);
+  binocle_gd_set_uniform_float2(*screen_shader, "scale", adapter.inverse_multiplier, adapter.inverse_multiplier);
+  binocle_gd_set_uniform_float2(*screen_shader, "viewport", vp_x, vp_y);
+  binocle_gd_draw_quad_to_screen(*screen_shader, render_target);
 
   binocle_window_refresh(&window);
   binocle_window_end_frame(&window);
@@ -143,9 +143,9 @@ int main(int argc, char *argv[])
   image = binocle_image_load(filename);
   texture = binocle_texture_from_image(image);
   material = binocle_material_new();
-  material.texture = &texture;
-  material.shader = &shader;
-  sprite = binocle_sprite_from_material(&material);
+  material->texture = texture;
+  material->shader = shader;
+  sprite = binocle_sprite_from_material(material);
 
   render_target = binocle_gd_create_render_target(DESIGN_WIDTH, DESIGN_HEIGHT, true, GL_RGBA8);
 
@@ -160,6 +160,12 @@ int main(int argc, char *argv[])
   }
 #endif
   binocle_log_info("Quit requested");
+  binocle_sprite_destroy(sprite);
+  binocle_material_destroy(material);
+  binocle_texture_destroy(texture);
+  binocle_image_destroy(image);
+  binocle_shader_destroy(shader);
+  binocle_shader_destroy(screen_shader);
   free(binocle_data_dir);
   binocle_app_destroy(&app);
 }
