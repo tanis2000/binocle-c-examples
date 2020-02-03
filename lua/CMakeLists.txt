@@ -1,4 +1,4 @@
-project(lua)
+project(lua-example)
 
 cmake_minimum_required(VERSION 3.0.2)
 
@@ -35,7 +35,11 @@ SET(VERSION_MINOR "1")
 SET(VERSION_PATCH "0")
 SET(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
-set(BINOCLE_LINK_LIBRARIES binocle-static luajit-5.1)
+if (NOT EMSCRIPTEN)
+    set(BINOCLE_LINK_LIBRARIES binocle-static luajit-5.1)
+else()
+    set(BINOCLE_LINK_LIBRARIES binocle-static lua)
+endif()
 
 if (MSVC)
 	message("Including Windows defines")
@@ -52,7 +56,9 @@ elseif(ANDROID)
 	message("Including Android defines")
 	include(BinocleAndroid)
 elseif(EMSCRIPTEN)
-	message("Including Emscripten defines")
+    message("Setting BINOCLE_DATA_DIR before including web settings")
+    set(BINOCLE_DATA_DIR "../assets/")
+    message("Including Emscripten defines")
 	include(BinocleWeb)
 endif()
 
@@ -71,11 +77,11 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/stb_image
     ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/physfs
     ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/sokol
-    ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/luajit/src
     ${PROJECT_SOURCE_DIR}/../binocle-c/src/binocle/core
 )
 
 if (APPLE)
+    include_directories(${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/luajit/src)
     if (IOS)
         include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/sdl/include/configs/default)
     else ()
@@ -85,16 +91,19 @@ if (APPLE)
 endif ()
 
 if (ANDROID)
+    include_directories(${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/luajit/src)
     include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/sdl/include/configs/default)
 endif ()
 
 if (WIN32)
+    include_directories(${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/luajit/src)
     include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/sdl/include/configs/windows)
     include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/glew/include)
 endif ()
 
 if (EMSCRIPTEN)
     include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/sdl/include/configs/default)
+    include_directories(${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/lua/src)
 endif ()
 
 file(GLOB SOURCE_FILES
@@ -119,9 +128,7 @@ if (NOT DEFINED BINOCLE_DATA_DIR)
     elseif (WIN32)
         set(BINOCLE_DATA_DIR "../../../../../../assets/")
     elseif (EMSCRIPTEN)
-        # TODO: make this relative but also make sure that it
-        # becomes relative in BinocleWeb.cmake as they have to be the same
-        set(BINOCLE_DATA_DIR "/Users/tanis/Documents/binocle-c/assets/")
+        # Nothing to do as this is defined above
     endif ()
 endif ()
 message("Data dir is ${BINOCLE_DATA_DIR}")
@@ -152,7 +159,7 @@ endif ()
 target_link_libraries(${PROJECT_NAME} ${BINOCLE_LINK_LIBRARIES})
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 
 
 if (APPLE)

@@ -1,6 +1,6 @@
 {
     "project": {
-        "name": "lua",
+        "name": "lua-example",
         "engine": "binocle-c"
     }
 }
