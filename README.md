@@ -10,6 +10,7 @@ This is a collection of example projects for [Binocle C](https://github.com/tani
 | ecs         | Entity Component System                                            |
 | lua         | Lua binding example (uses FFI)                                     |
 | model       | 3D model loading and rendering                                     |
+| pbr         | Physics Based Rendering                                            |
 | rendertarget| How to use a render target                                         |
 | spatialhash | Collision detection using 2D spatial hash for braodphase detection |
 | spritebatch | Sprite batching                                                    |
