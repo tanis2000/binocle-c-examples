@@ -51,6 +51,8 @@ binocle_texture *roughness_texture;
 binocle_texture *ao_texture;
 binocle_sprite sprite;
 binocle_model model;
+float elapsed_time = 0;
+
 static kmVec3 pointLightPositions[] = {
   /*
   {.x = 0.7f, .y = 0.2f,  .z = 2.0f},
@@ -58,10 +60,16 @@ static kmVec3 pointLightPositions[] = {
   {.x = -4.0f, .y = 2.0f, .z = -12.0f},
   {.x = 0.0f, .y= 0.0f, .z = -3.0f}
    */
-  {.x = -5.0f, .y = 0.0f, .z = 0.0f}, // left
-  {.x = 5.0f, .y = 0.0f, .z = 0.0f}, // right
-  {.x = 0.0f, .y = 0.0f, .z = 5.0f}, // front
-  {.x = 0.0f, .y = 0.0f, .z = -5.0f} // back
+  /*
+  {.x = -7.0f, .y = 0.0f, .z = 0.0f}, // left
+  {.x = 7.0f, .y = 0.0f, .z = 0.0f}, // right
+  {.x = 0.0f, .y = 0.0f, .z = 7.0f}, // front
+  {.x = 0.0f, .y = 0.0f, .z = -7.0f} // back
+  */
+  {.x = -1.0f, .y = 0.0f, .z = 0.0f}, // left
+  {.x = 1.0f, .y = 0.0f, .z = 0.0f}, // right
+  {.x = 0.0f, .y = 0.0f, .z = 1.0f}, // front
+  {.x = 0.0f, .y = 0.0f, .z = -1.0f} // back
 };
 
 void setup_lights() {
@@ -183,14 +191,14 @@ void setup_lights() {
 
 void draw_light(kmVec3 position, kmAABB2 viewport) {
   static GLfloat g_quad_vertex_buffer_data[] = {
-    0.5f, -0.5f, -0.5f,
-    0.5f, -0.5f, 0.5f,
-    -0.5f, -0.5f, 0.5f,
-    -0.5f, -0.5f, -0.5f,
-    0.5f, 0.5f, -0.5f,
-    0.5f, 0.5f, 0.5f,
-    -0.5f, 0.5f, 0.5f,
-    -0.5f, 0.5f, -0.5f
+    1.0f, -1.0f, -1.0f,
+    1.0f, -1.0f, 1.0f,
+    -1.0f, -1.0f, 1.0f,
+    -1.0f, -1.0f, -1.0f,
+    1.0f, 1.0f, -1.0f,
+    1.0f, 1.0f, 1.0f,
+    -1.0f, 1.0f, 1.0f,
+    -1.0f, 1.0f, -1.0f
   };
 
   static const GLuint index_buffer_data[] = {
@@ -219,28 +227,17 @@ void draw_light(kmVec3 position, kmAABB2 viewport) {
   kmMat4 modelMatrix;
   kmMat4Identity(&modelMatrix);
 
+  // Scale the light to a sensible size
   kmMat4 scale;
-  kmMat4Scaling(&scale, 0.2f, 0.2f, 0.2f);
-  kmMat4Multiply(&modelMatrix, &modelMatrix, &scale);
+  kmMat4Scaling(&scale, 0.1f, 0.1f, 0.1f);
 
+  // Translate the light to the position in world space
   kmMat4 trans;
   kmMat4Translation(&trans, position.x, position.y, position.z);
+
+  // Apply the transformations to the model to bring it to world space. Order is important
   kmMat4Multiply(&modelMatrix, &modelMatrix, &trans);
-
-
-/*
-  kmMat4 rot_x;
-  kmMat4 rot_y;
-  kmMat4 rot_z;
-  kmMat4RotationX(&rot_x, 1);
-  kmMat4RotationY(&rot_y, 1);
-  kmMat4RotationZ(&rot_z, 1);
-  kmMat4Multiply(&modelMatrix, &modelMatrix, &rot_x);
-  kmMat4Multiply(&modelMatrix, &modelMatrix, &rot_y);
-  kmMat4Multiply(&modelMatrix, &modelMatrix, &rot_z);
-*/
-
-
+  kmMat4Multiply(&modelMatrix, &modelMatrix, &scale);
 
   GLuint quad_vertexbuffer;
   glCheck(glGenBuffers(1, &quad_vertexbuffer));
@@ -350,6 +347,7 @@ void draw_pbr_mesh(binocle_gd *gd, const struct binocle_mesh *mesh, kmAABB2 view
 void main_loop() {
   binocle_window_begin_frame(&window);
   float dt = binocle_window_get_frame_time(&window) / 1000.0f;
+  elapsed_time += dt;
 
   binocle_input_update(&input);
 
@@ -390,6 +388,21 @@ void main_loop() {
     binocle_camera_3d_rotate(&camera, -30.0 * dt, 0.0f, 0.0f);
   }
 
+  if (binocle_input_is_key_pressed(&input, KEY_1)) {
+    kmMat4 tr;
+    kmMat4Translation(&tr, -camera.position.x, -camera.position.y, -camera.position.z);
+    kmMat4 rot;
+    kmMat4RotationY(&rot, 1.0f * dt);
+    kmMat4 tr2;
+    kmMat4Translation(&tr2, camera.position.x, camera.position.y, camera.position.z);
+    kmMat4 cam = camera.transform_matrix;
+    //kmMat4Multiply(&cam, &cam, &tr);
+    kmMat4Multiply(&cam, &cam, &rot);
+    //kmMat4Multiply(&cam, &cam, &tr2);
+    camera.transform_matrix = cam;
+    kmMat4Inverse(&camera.inverse_transform_matrix, &camera.transform_matrix);
+  }
+
   binocle_gd_clear(binocle_color_black());
 
   kmAABB2 viewport;
@@ -402,19 +415,14 @@ void main_loop() {
   binocle_gd_apply_shader(&gd, *shader);
   //binocle_gd_draw_test_triangle(shader);
   //binocle_gd_draw_test_cube(shader);
-  kmMat4 rot_x;
-  kmMat4 rot_y;
-  kmMat4 rot_z;
-  kmMat4RotationX(&rot_x, 0.3f * dt);
-  kmMat4RotationY(&rot_y, 0.3f * dt);
-  kmMat4RotationZ(&rot_z, 0.3f * dt);
-  //kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &rot_x);
-  //kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &rot_y);
-  //kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &rot_z);
-  kmMat4 trans;
-  kmMat4Translation(&trans, 0.1f * dt, 0.0f, 0.0f);
-  //kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &trans);
+
   setup_lights();
+  for (int i = 0 ; i < 4 ; i++) {
+    pointLightPositions[i].x = pointLightPositions[i].x + sinf(elapsed_time * 5.0f) * 0.07f;
+    pointLightPositions[i].y = pointLightPositions[i].y + sinf(elapsed_time * 2.0f) * 0.07f;
+    pointLightPositions[i].z = pointLightPositions[i].z + sinf(elapsed_time * 3.0f) * 0.07f;
+  }
+
   kmMat4Identity(&model.meshes[0].transform);
   draw_pbr_mesh(&gd, &model.meshes[0], viewport, &camera);
 
