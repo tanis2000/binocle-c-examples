@@ -87,8 +87,12 @@ void main(void) {
     color = vertexColor;
     position = vec3(modelMatrix * vec4(vertexPosition, 1.0));
     mat3 modelMatrix3 = mat3(modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz);
-    mat3 normalMatrix = transpose(inverse(modelMatrix3));
-    normal = (normalMatrix * vertexNormal);
+//    mat3 normalMatrix = transpose(inverse(modelMatrix3));
+//    normal = (normalMatrix * vertexNormal);
+
+    mat3 viewMatrix3 = mat3(viewMatrix[0].xyz, viewMatrix[1].xyz, viewMatrix[2].xyz);
+    normal = viewMatrix3 * modelMatrix3 * vertexNormal;
+
     gl_PointSize = 1.0;
     gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(vertexPosition, 1.0);
 }

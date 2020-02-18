@@ -1,5 +1,9 @@
 #version 120
 
+//#define WITH_NORMALMAP_GREEN_UP 1
+//#define WITH_NORMALMAP_UNSIGNED 1
+//#define WITH_NORMALMAP_2CHANNEL 1
+
 struct Material {
     sampler2D albedoMap;
     sampler2D normalMap;
@@ -64,6 +68,10 @@ float DistributionGGX(vec3 N, vec3 H, float roughness);
 float GeometrySchlickGGX(float NdotV, float roughness);
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness);
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
+vec3 getNormalFromMap2();
+vec3 perturb_normal( vec3 N, vec3 V, vec2 texcoord );
+mat3 cotangent_frame( vec3 N, vec3 p, vec2 uv );
+vec3 getNormalFromMap3();
 
 void main(void) {
     // properties
@@ -73,6 +81,8 @@ void main(void) {
     float ao        = texture2D(material.aoMap, tcoord).r;
 
     vec3 N = getNormalFromMap();
+    //vec3 N = getNormalFromMap2();
+    //vec3 N = getNormalFromMap3();
     vec3 V = normalize(viewPos - position);
 
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0
@@ -129,6 +139,52 @@ void main(void) {
 
     gl_FragColor = vec4(color, 1.0);
 
+}
+
+mat3 cotangent_frame( vec3 N, vec3 p, vec2 uv ) {
+    // get edge vectors of the pixel triangle
+    vec3 dp1 = dFdx( p );
+    vec3 dp2 = dFdy( p );
+    vec2 duv1 = dFdx( uv );
+    vec2 duv2 = dFdy( uv );
+    // solve the linear system
+    vec3 dp2perp = cross( dp2, N );
+    vec3 dp1perp = cross( N, dp1 );
+    vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+    // construct a scale-invariant frame
+    float invmax = inversesqrt( max( dot(T,T), dot(B,B) ) );
+    return mat3( T * invmax, B * invmax, N );
+}
+
+vec3 perturb_normal( vec3 N, vec3 V, vec2 texcoord ) {
+    // assume N, the interpolated vertex normal and
+    // V, the view vector (vertex to eye)
+    vec3 map = texture2D( material.normalMap, texcoord ).xyz;
+#ifdef WITH_NORMALMAP_UNSIGNED
+    map = map * 255./127. - 128./127.;
+#endif
+#ifdef WITH_NORMALMAP_2CHANNEL
+    map.z = sqrt( 1. - dot( map.xy, map.xy ) );
+#endif
+#ifdef WITH_NORMALMAP_GREEN_UP
+    map.y = -map.y;
+#endif
+    mat3 TBN = cotangent_frame( N, -V, texcoord );
+    return normalize( TBN * map );
+}
+
+vec3 getNormalFromMap2() {
+    vec3 N = normalize(normal);
+    N = perturb_normal(N, viewPos - position, tcoord);
+    return N;
+}
+
+vec3 getNormalFromMap3() {
+    vec3 N = normalize(normal);
+    vec3 V = normalize(viewPos - position);
+    N = perturb_normal(N, V, tcoord);
+    return N;
 }
 
 // ----------------------------------------------------------------------------

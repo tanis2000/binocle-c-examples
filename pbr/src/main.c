@@ -66,10 +66,16 @@ static kmVec3 pointLightPositions[] = {
   {.x = 0.0f, .y = 0.0f, .z = 7.0f}, // front
   {.x = 0.0f, .y = 0.0f, .z = -7.0f} // back
   */
+  /*
   {.x = -1.0f, .y = 0.0f, .z = 0.0f}, // left
   {.x = 1.0f, .y = 0.0f, .z = 0.0f}, // right
   {.x = 0.0f, .y = 0.0f, .z = 1.0f}, // front
   {.x = 0.0f, .y = 0.0f, .z = -1.0f} // back
+   */
+  {.x = -2.0f, .y = 0.0f, .z = 0.0f}, // left
+  {.x = 2.0f, .y = 0.0f, .z = 0.0f}, // right
+  {.x = 0.0f, .y = 0.0f, .z = 2.0f}, // front
+  {.x = 0.0f, .y = 0.0f, .z = -2.0f} // back
 };
 
 void setup_lights() {
@@ -418,9 +424,29 @@ void main_loop() {
 
   setup_lights();
   for (int i = 0 ; i < 4 ; i++) {
+    kmMat4 lightMat;
+    kmMat4Identity(&lightMat);
+
+    kmMat4 tr;
+    kmMat4Translation(&tr, -pointLightPositions[i].x, -pointLightPositions[i].y, -pointLightPositions[i].z);
+    kmMat4 rot;
+    kmMat4RotationY(&rot, 1.0f * dt);
+    kmMat4 tr2;
+    kmMat4Translation(&tr2, pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z);
+
+    kmMat4Multiply(&lightMat, &rot, &tr2);
+
+    kmVec3 trv;
+    kmMat4ExtractTranslationVec3(&lightMat, &trv);
+    pointLightPositions[i].x = trv.x;
+    pointLightPositions[i].y = trv.y;
+    pointLightPositions[i].z = trv.z;
+
+    /*
     pointLightPositions[i].x = pointLightPositions[i].x + sinf(elapsed_time * 5.0f) * 0.07f;
     pointLightPositions[i].y = pointLightPositions[i].y + sinf(elapsed_time * 2.0f) * 0.07f;
     pointLightPositions[i].z = pointLightPositions[i].z + sinf(elapsed_time * 3.0f) * 0.07f;
+     */
   }
 
   kmMat4Identity(&model.meshes[0].transform);
@@ -448,7 +474,7 @@ int main(int argc, char *argv[])
   camera_pos.x = 0;
   camera_pos.y = 0;
   camera_pos.z = 3.0f;
-  camera = binocle_camera_3d_new(camera_pos, 0.3f, 1000.0f, 60);
+  camera = binocle_camera_3d_new(camera_pos, 0.1f, 1000.0f, 60);
   //binocle_camera_3d_set_rotation(&camera, 0, -90, 0);
   input = binocle_input_new();
   binocle_shader_init_defaults();
