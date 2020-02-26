@@ -79,7 +79,7 @@ static kmVec3 pointLightPositions[] = {
 };
 
 void setup_lights() {
-  binocle_gd_apply_shader(&gd, *shader);
+  binocle_gd_apply_shader(&gd, shader);
   GLint tex_id;
   glCheck(tex_id = glGetUniformLocation(shader->program_id, "material.albedoMap"));
   glCheck(glUniform1i(tex_id, 0));
@@ -125,9 +125,9 @@ void setup_lights() {
     binocle_gd_set_uniform_vec3(shader, "pointLights[0].ambient", ambient);
     binocle_gd_set_uniform_vec3(shader, "pointLights[0].diffuse", diffuse);
     binocle_gd_set_uniform_vec3(shader, "pointLights[0].specular", specular);
-    binocle_gd_set_uniform_float(*shader, "pointLights[0].constant", 1.0f);
-    binocle_gd_set_uniform_float(*shader, "pointLights[0].linear", 0.09);
-    binocle_gd_set_uniform_float(*shader, "pointLights[0].quadratic", 0.032);
+    binocle_gd_set_uniform_float(shader, "pointLights[0].constant", 1.0f);
+    binocle_gd_set_uniform_float(shader, "pointLights[0].linear", 0.09);
+    binocle_gd_set_uniform_float(shader, "pointLights[0].quadratic", 0.032);
   }
   {
     // point light 2
@@ -138,9 +138,9 @@ void setup_lights() {
     binocle_gd_set_uniform_vec3(shader, "pointLights[1].ambient", ambient);
     binocle_gd_set_uniform_vec3(shader, "pointLights[1].diffuse", diffuse);
     binocle_gd_set_uniform_vec3(shader, "pointLights[1].specular", specular);
-    binocle_gd_set_uniform_float(*shader, "pointLights[1].constant", 1.0f);
-    binocle_gd_set_uniform_float(*shader, "pointLights[1].linear", 0.09);
-    binocle_gd_set_uniform_float(*shader, "pointLights[1].quadratic", 0.032);
+    binocle_gd_set_uniform_float(shader, "pointLights[1].constant", 1.0f);
+    binocle_gd_set_uniform_float(shader, "pointLights[1].linear", 0.09);
+    binocle_gd_set_uniform_float(shader, "pointLights[1].quadratic", 0.032);
   }
   {
     // point light 3
@@ -151,9 +151,9 @@ void setup_lights() {
     binocle_gd_set_uniform_vec3(shader, "pointLights[2].ambient", ambient);
     binocle_gd_set_uniform_vec3(shader, "pointLights[2].diffuse", diffuse);
     binocle_gd_set_uniform_vec3(shader, "pointLights[2].specular", specular);
-    binocle_gd_set_uniform_float(*shader, "pointLights[2].constant", 1.0f);
-    binocle_gd_set_uniform_float(*shader, "pointLights[2].linear", 0.09f);
-    binocle_gd_set_uniform_float(*shader, "pointLights[2].quadratic", 0.032);
+    binocle_gd_set_uniform_float(shader, "pointLights[2].constant", 1.0f);
+    binocle_gd_set_uniform_float(shader, "pointLights[2].linear", 0.09f);
+    binocle_gd_set_uniform_float(shader, "pointLights[2].quadratic", 0.032);
   }
   {
     // point light 4
@@ -164,9 +164,9 @@ void setup_lights() {
     binocle_gd_set_uniform_vec3(shader, "pointLights[3].ambient", ambient);
     binocle_gd_set_uniform_vec3(shader, "pointLights[3].diffuse", diffuse);
     binocle_gd_set_uniform_vec3(shader, "pointLights[3].specular", specular);
-    binocle_gd_set_uniform_float(*shader, "pointLights[3].constant", 1.0f);
-    binocle_gd_set_uniform_float(*shader, "pointLights[3].linear", 0.09);
-    binocle_gd_set_uniform_float(*shader, "pointLights[3].quadratic", 0.032);
+    binocle_gd_set_uniform_float(shader, "pointLights[3].constant", 1.0f);
+    binocle_gd_set_uniform_float(shader, "pointLights[3].linear", 0.09);
+    binocle_gd_set_uniform_float(shader, "pointLights[3].quadratic", 0.032);
   }
   // spotLight
   {
@@ -187,11 +187,11 @@ void setup_lights() {
     binocle_gd_set_uniform_vec3(shader, "spotLight.ambient", ambient);
     binocle_gd_set_uniform_vec3(shader, "spotLight.diffuse", diffuse);
     binocle_gd_set_uniform_vec3(shader, "spotLight.specular", specular);
-    binocle_gd_set_uniform_float(*shader, "spotLight.constant", 1.0f);
-    binocle_gd_set_uniform_float(*shader, "spotLight.linear", 0.09f);
-    binocle_gd_set_uniform_float(*shader, "spotLight.quadratic", 0.032f);
-    binocle_gd_set_uniform_float(*shader, "spotLight.cutOff", cosf(kmDegreesToRadians(12.5f)));
-    binocle_gd_set_uniform_float(*shader, "spotLight.outerCutOff", cosf(kmDegreesToRadians(15.0f)));
+    binocle_gd_set_uniform_float(shader, "spotLight.constant", 1.0f);
+    binocle_gd_set_uniform_float(shader, "spotLight.linear", 0.09f);
+    binocle_gd_set_uniform_float(shader, "spotLight.quadratic", 0.032f);
+    binocle_gd_set_uniform_float(shader, "spotLight.cutOff", cosf(kmDegreesToRadians(12.5f)));
+    binocle_gd_set_uniform_float(shader, "spotLight.outerCutOff", cosf(kmDegreesToRadians(15.0f)));
   }
 }
 
@@ -255,9 +255,9 @@ void draw_light(kmVec3 position, kmAABB2 viewport) {
   glCheck(glVertexAttribPointer(pos_id, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 3, 0));
   glCheck(glEnableVertexAttribArray(pos_id));
 
-  binocle_gd_set_uniform_mat4(*lamp_shader, "projectionMatrix", projectionMatrix);
-  binocle_gd_set_uniform_mat4(*lamp_shader, "viewMatrix", viewMatrix);
-  binocle_gd_set_uniform_mat4(*lamp_shader, "modelMatrix", modelMatrix);
+  binocle_gd_set_uniform_mat4(lamp_shader, "projectionMatrix", projectionMatrix);
+  binocle_gd_set_uniform_mat4(lamp_shader, "viewMatrix", viewMatrix);
+  binocle_gd_set_uniform_mat4(lamp_shader, "modelMatrix", modelMatrix);
 
   GLuint quad_indexbuffer;
   glCheck(glGenBuffers(1, &quad_indexbuffer));
@@ -301,7 +301,7 @@ void draw_pbr_mesh(binocle_gd *gd, const struct binocle_mesh *mesh, kmAABB2 view
   binocle_gd_apply_3d_gl_states();
   binocle_gd_apply_viewport(viewport);
   binocle_gd_apply_blend_mode(mesh->material->blend_mode);
-  binocle_gd_apply_shader(gd, *mesh->material->shader);
+  binocle_gd_apply_shader(gd, mesh->material->shader);
   apply_pbr_texture(mesh->material);
 
   kmMat4 projectionMatrix;
@@ -418,7 +418,7 @@ void main_loop() {
   viewport.max.y = window.height;
 
   binocle_gd_apply_viewport(viewport);
-  binocle_gd_apply_shader(&gd, *shader);
+  binocle_gd_apply_shader(&gd, shader);
   //binocle_gd_draw_test_triangle(shader);
   //binocle_gd_draw_test_cube(shader);
 
@@ -452,7 +452,7 @@ void main_loop() {
   kmMat4Identity(&model.meshes[0].transform);
   draw_pbr_mesh(&gd, &model.meshes[0], viewport, &camera);
 
-  binocle_gd_apply_shader(&gd, *lamp_shader);
+  binocle_gd_apply_shader(&gd, lamp_shader);
   for (int i = 0 ; i < 4 ; i++) {
     draw_light(pointLightPositions[i], viewport);
   }
