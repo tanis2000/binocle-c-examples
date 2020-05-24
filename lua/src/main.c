@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
   font_image = binocle_image_load(font_image_filename);
   font_texture = binocle_texture_from_image(font_image);
   font_material = binocle_material_new();
-  font_material->texture = font_texture;
+  font_material->albedo_texture = font_texture;
   font_material->shader = shader;
   font->material = font_material;
   font_sprite = binocle_sprite_from_material(font_material);
