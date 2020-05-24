@@ -65,8 +65,8 @@ void main_loop() {
   scale.x = 0.3f;
   scale.y = 0.3f;
   kmAABB2 viewport = binocle_camera_get_viewport(camera);
-  uint64_t x = (uint64_t)((DESIGN_WIDTH - (sprite->material->texture->width * scale.x)) / 2.0f);
-  uint64_t y = (uint64_t)((DESIGN_HEIGHT - (sprite->material->texture->height * scale.x)) / 2.0f);
+  uint64_t x = (uint64_t)((DESIGN_WIDTH - (sprite->material->albedo_texture->width * scale.x)) / 2.0f);
+  uint64_t y = (uint64_t)((DESIGN_HEIGHT - (sprite->material->albedo_texture->height * scale.x)) / 2.0f);
 
   binocle_sprite_draw(sprite, &gd, x, y, &viewport, 0, &scale, &camera);
 
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
   image = binocle_image_load(filename);
   texture = binocle_texture_from_image(image);
   material = binocle_material_new();
-  material->texture = texture;
+  material->albedo_texture = texture;
   material->shader = shader;
   sprite = binocle_sprite_from_material(material);
 
