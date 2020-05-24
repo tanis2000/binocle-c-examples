@@ -35,7 +35,7 @@ SET(VERSION_MINOR "1")
 SET(VERSION_PATCH "0")
 SET(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
-if (NOT EMSCRIPTEN)
+if (WIN32)
     set(BINOCLE_LINK_LIBRARIES binocle-static luajit-5.1)
 else()
     set(BINOCLE_LINK_LIBRARIES binocle-static lua)
@@ -81,7 +81,8 @@ include_directories(
 )
 
 if (APPLE)
-    include_directories(${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/luajit/src)
+    #include_directories(${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/luajit/src)
+    include_directories(${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/lua/src)
     if (IOS)
         include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/sdl/include/configs/default)
     else ()

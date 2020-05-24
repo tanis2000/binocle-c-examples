@@ -1,19 +1,3 @@
-local ffi = require("ffi")
-
-ffi.cdef[[
-
-typedef struct kmVec2 {
-    float x;
-    float y;
-} kmVec2;
-
-typedef struct kmAABB2 {
-    kmVec2 min; /** The max corner of the box */
-    kmVec2 max; /** The min corner of the box */
-} kmAABB2;
-
-]]
-
 io.write("Begin of main.lua\n");
 
 local assets_dir = sdl.assets_dir()
@@ -43,7 +27,7 @@ end
 local player_x = 100
 local player_y = 100
 
-local scale = ffi.new("kmVec2")
+local scale = lkazmath.kmVec2New()
 scale.x = 1.0
 scale.y = 1.0
 io.write("scale: " .. tostring(scale) .. "\n")
