@@ -87,8 +87,8 @@ void main_loop() {
   kmMat4Identity(&identity_matrix);
 
   // Center the logo in the render target
-  uint64_t x = (uint64_t)((DESIGN_WIDTH - (sprite->material->texture->width * scale.x)) / 2.0f);
-  uint64_t y = (uint64_t)((DESIGN_HEIGHT - (sprite->material->texture->height * scale.x)) / 2.0f);
+  uint64_t x = (uint64_t)((DESIGN_WIDTH - (sprite->material->albedo_texture->width * scale.x)) / 2.0f);
+  uint64_t y = (uint64_t)((DESIGN_HEIGHT - (sprite->material->albedo_texture->height * scale.x)) / 2.0f);
 
   // Draw the logo to the render target
   binocle_sprite_draw(sprite, &gd, x, y, &viewport, 0, &scale, &camera);
@@ -102,13 +102,13 @@ void main_loop() {
   // Clear the screen with an azure
   binocle_gd_clear(binocle_color_azure());
   binocle_gd_apply_viewport(vp);
-  binocle_gd_apply_shader(&gd, *screen_shader);
-  binocle_gd_set_uniform_float2(*screen_shader, "resolution", DESIGN_WIDTH,
+  binocle_gd_apply_shader(&gd, screen_shader);
+  binocle_gd_set_uniform_float2(screen_shader, "resolution", DESIGN_WIDTH,
                                 DESIGN_HEIGHT);
-  binocle_gd_set_uniform_mat4(*screen_shader, "transform", identity_matrix);
-  binocle_gd_set_uniform_float2(*screen_shader, "scale", adapter.inverse_multiplier, adapter.inverse_multiplier);
-  binocle_gd_set_uniform_float2(*screen_shader, "viewport", vp_x, vp_y);
-  binocle_gd_draw_quad_to_screen(*screen_shader, render_target);
+  binocle_gd_set_uniform_mat4(screen_shader, "transform", identity_matrix);
+  binocle_gd_set_uniform_float2(screen_shader, "scale", adapter.inverse_multiplier, adapter.inverse_multiplier);
+  binocle_gd_set_uniform_float2(screen_shader, "viewport", vp_x, vp_y);
+  binocle_gd_draw_quad_to_screen(screen_shader, render_target);
 
   binocle_window_refresh(&window);
   binocle_window_end_frame(&window);
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
   image = binocle_image_load(filename);
   texture = binocle_texture_from_image(image);
   material = binocle_material_new();
-  material->texture = texture;
+  material->albedo_texture = texture;
   material->shader = shader;
   sprite = binocle_sprite_from_material(material);
 
