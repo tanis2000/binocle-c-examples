@@ -19,6 +19,7 @@
 #include <binocle_sprite.h>
 #include <binocle_shader.h>
 #include <binocle_material.h>
+#include <binocle_array.h>
 #define BINOCLE_MATH_IMPL
 #include "binocle_math.h"
 #include "binocle_gd.h"
@@ -27,20 +28,20 @@
 #include "sys_config.h"
 
 //#define GAMELOOP 1
-#define MAX_SPRITES 1024
+#define START_SPRITES 1024
 
 typedef struct entity_t {
-  binocle_sprite sprite;
+  binocle_sprite *sprite;
   kmVec2 pos;
   kmVec2 sub_pos;
   kmVec2 speed;
 } entity_t;
 
-binocle_window window;
+binocle_window *window;
 binocle_input input;
 binocle_viewport_adapter adapter;
 binocle_camera camera;
-entity_t entities[MAX_SPRITES];
+entity_t *entities;
 binocle_gd gd;
 binocle_bitmapfont *font;
 binocle_image *font_image;
@@ -50,8 +51,22 @@ binocle_sprite *font_sprite;
 kmVec2 font_sprite_pos;
 binocle_sprite_batch sprite_batch;
 binocle_shader *shader;
+binocle_image *image;
+binocle_texture *texture;
+binocle_material *material;
 float gravity;
 kmAABB2 bounding_box;
+uint32_t number_of_sprites = START_SPRITES;
+
+void create_entity(entity_t *entity) {
+  entity->sprite = binocle_sprite_from_material(material);
+  entity->pos.x = (float)lrand48()/RAND_MAX * bounding_box.max.x;
+  entity->pos.y = (float)lrand48()/RAND_MAX * bounding_box.max.y;
+  entity->sub_pos.x = 0;
+  entity->sub_pos.y = 0;
+  entity->speed.x = (float)lrand48()/RAND_MAX * 500.0f;
+  entity->speed.y = ((float)lrand48()/RAND_MAX * 500.0f) - 250.0f;
+}
 
 void update_entity(entity_t *entity, float dt) {
   entity->pos.x += entity->speed.x * dt;
@@ -81,38 +96,50 @@ void update_entity(entity_t *entity, float dt) {
 }
 
 void main_loop() {
-  binocle_window_begin_frame(&window);
+  binocle_window_begin_frame(window);
   binocle_input_update(&input);
 
   if (input.resized) {
-    kmVec2 oldWindowSize = {.x = window.width, .y = window.height};
-    window.width = input.newWindowSize.x;
-    window.height = input.newWindowSize.y;
+    kmVec2 oldWindowSize = {.x = window->width, .y = window->height};
+    window->width = input.newWindowSize.x;
+    window->height = input.newWindowSize.y;
     binocle_viewport_adapter_reset(&adapter, oldWindowSize, input.newWindowSize);
     input.resized = false;
+  }
+
+  if (binocle_input_is_key_pressed(&input, KEY_SPACE)) {
+    uint32_t old_number_of_sprites = number_of_sprites;
+    number_of_sprites += 256;
+    binocle_array_grow(entities, number_of_sprites);
+    for (int i = old_number_of_sprites ; i < number_of_sprites ; i++) {
+      create_entity(&entities[i]);
+    }
   }
 
   kmMat4 matrix;
   kmMat4Identity(&matrix);
   binocle_sprite_batch_begin(&sprite_batch, binocle_camera_get_viewport(camera), BINOCLE_SPRITE_SORT_MODE_DEFERRED, shader, &matrix);
 
-  binocle_window_clear(&window);
+  binocle_window_clear(window);
   kmVec2 scale;
   scale.x = 1.0f;
   scale.y = 1.0f;
-  for (int i = 0 ; i < MAX_SPRITES ; i++) {
-    update_entity(&entities[i], (binocle_window_get_frame_time(&window) / 1000.0f));
+  for (int i = 0 ; i < number_of_sprites ; i++) {
+    update_entity(&entities[i], (binocle_window_get_frame_time(window) / 1000.0f));
     //binocle_sprite_draw(entities[i].sprite, &gd, (uint64_t)entities[i].pos.x, (uint64_t)entities[i].pos.y, adapter.viewport, 0, scale, &camera);
     //binocle_sprite_batch_draw_position(&sprite_batch, entities[i].sprite.material->texture, entities[i].pos);
-    binocle_sprite_batch_draw(&sprite_batch, entities[i].sprite.material->albedo_texture, &entities[i].pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
+    binocle_sprite_batch_draw(&sprite_batch, entities[i].sprite->material->albedo_texture, &entities[i].pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
   }
   kmMat4 view_matrix;
   kmMat4Identity(&view_matrix);
-  binocle_bitmapfont_draw_string(font, "TEST", 12, &gd, 20, 20, adapter.viewport, binocle_color_white(), view_matrix);
   //binocle_sprite_draw(font_sprite, &gd, (uint64_t)font_sprite_pos.x, (uint64_t)font_sprite_pos.y, adapter.viewport);
   binocle_sprite_batch_end(&sprite_batch, binocle_camera_get_viewport(camera));
-  binocle_window_refresh(&window);
-  binocle_window_end_frame(&window);
+
+  char fps[256];
+  sprintf(fps, "FPS:%d COUNT: %d PRESS SPACE TO ADD", binocle_window_get_fps(window), number_of_sprites);
+  binocle_bitmapfont_draw_string(font, fps, 16, &gd, 20, 20, adapter.viewport, binocle_color_white(), view_matrix);
+  binocle_window_refresh(window);
+  binocle_window_end_frame(window);
   //binocle_log_info("FPS: %d", binocle_window_get_fps(&window));
 }
 
@@ -120,20 +147,20 @@ int main(int argc, char *argv[])
 {
   binocle_sdl_init();
   window = binocle_window_new(320, 240, "Binocle Sprite Batch");
-  binocle_window_set_background_color(&window, binocle_color_azure());
-  adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING, BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window.original_width, window.original_height, window.original_width, window.original_height);
+  binocle_window_set_background_color(window, binocle_color_azure());
+  adapter = binocle_viewport_adapter_new(*window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING, BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window->original_width, window->original_height, window->original_width, window->original_height);
   camera = binocle_camera_new(&adapter);
   input = binocle_input_new();
   char filename[1024];
   sprintf(filename, "%s%s", BINOCLE_DATA_DIR, "wabbit_alpha.png");
-  binocle_image *image = binocle_image_load(filename);
-  binocle_texture *texture = binocle_texture_from_image(image);
+  image = binocle_image_load(filename);
+  texture = binocle_texture_from_image(image);
   char vert[1024];
   sprintf(vert, "%s%s", BINOCLE_DATA_DIR, "default.vert");
   char frag[1024];
   sprintf(frag, "%s%s", BINOCLE_DATA_DIR, "default.frag");
   shader = binocle_shader_load_from_file(vert, frag);
-  binocle_material *material = binocle_material_new();
+  material = binocle_material_new();
   material->albedo_texture = texture;
   material->shader = shader;
   srand48(42);
@@ -142,14 +169,10 @@ int main(int argc, char *argv[])
   bounding_box.min.y = 0;
   bounding_box.max.x = 320;
   bounding_box.max.y = 240;
-  for (int i = 0 ; i < MAX_SPRITES ; i++) {
-    entities[i].sprite = *binocle_sprite_from_material(material);
-    entities[i].pos.x = (float)lrand48()/RAND_MAX * bounding_box.max.x;
-    entities[i].pos.y = (float)lrand48()/RAND_MAX * bounding_box.max.y;
-    entities[i].sub_pos.x = 0;
-    entities[i].sub_pos.y = 0;
-    entities[i].speed.x = (float)lrand48()/RAND_MAX * 500.0f;
-    entities[i].speed.y = ((float)lrand48()/RAND_MAX * 500.0f) - 250.0f;
+
+  binocle_array_set_capacity(entities, number_of_sprites);
+  for (int i = 0 ; i < number_of_sprites ; i++) {
+    create_entity(&entities[i]);
   }
 
   char font_filename[1024];
