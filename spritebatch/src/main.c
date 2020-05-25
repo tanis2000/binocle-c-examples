@@ -43,13 +43,13 @@ binocle_camera camera;
 entity_t entities[MAX_SPRITES];
 binocle_gd gd;
 binocle_bitmapfont *font;
-binocle_image font_image;
-binocle_texture font_texture;
-binocle_material font_material;
-binocle_sprite font_sprite;
+binocle_image *font_image;
+binocle_texture *font_texture;
+binocle_material *font_material;
+binocle_sprite *font_sprite;
 kmVec2 font_sprite_pos;
 binocle_sprite_batch sprite_batch;
-binocle_shader shader;
+binocle_shader *shader;
 float gravity;
 kmAABB2 bounding_box;
 
@@ -94,7 +94,7 @@ void main_loop() {
 
   kmMat4 matrix;
   kmMat4Identity(&matrix);
-  binocle_sprite_batch_begin(&sprite_batch, binocle_camera_get_viewport(camera), BINOCLE_SPRITE_SORT_MODE_DEFERRED, &shader, &matrix);
+  binocle_sprite_batch_begin(&sprite_batch, binocle_camera_get_viewport(camera), BINOCLE_SPRITE_SORT_MODE_DEFERRED, shader, &matrix);
 
   binocle_window_clear(&window);
   kmVec2 scale;
@@ -104,7 +104,7 @@ void main_loop() {
     update_entity(&entities[i], (binocle_window_get_frame_time(&window) / 1000.0f));
     //binocle_sprite_draw(entities[i].sprite, &gd, (uint64_t)entities[i].pos.x, (uint64_t)entities[i].pos.y, adapter.viewport, 0, scale, &camera);
     //binocle_sprite_batch_draw_position(&sprite_batch, entities[i].sprite.material->texture, entities[i].pos);
-    binocle_sprite_batch_draw(&sprite_batch, entities[i].sprite.material->texture, &entities[i].pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
+    binocle_sprite_batch_draw(&sprite_batch, entities[i].sprite.material->albedo_texture, &entities[i].pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
   }
   kmMat4 view_matrix;
   kmMat4Identity(&view_matrix);
@@ -126,16 +126,16 @@ int main(int argc, char *argv[])
   input = binocle_input_new();
   char filename[1024];
   sprintf(filename, "%s%s", BINOCLE_DATA_DIR, "wabbit_alpha.png");
-  binocle_image image = binocle_image_load(filename);
-  binocle_texture texture = binocle_texture_from_image(image);
+  binocle_image *image = binocle_image_load(filename);
+  binocle_texture *texture = binocle_texture_from_image(image);
   char vert[1024];
   sprintf(vert, "%s%s", BINOCLE_DATA_DIR, "default.vert");
   char frag[1024];
   sprintf(frag, "%s%s", BINOCLE_DATA_DIR, "default.frag");
   shader = binocle_shader_load_from_file(vert, frag);
-  binocle_material material = binocle_material_new();
-  material.texture = &texture;
-  material.shader = &shader;
+  binocle_material *material = binocle_material_new();
+  material->albedo_texture = texture;
+  material->shader = shader;
   srand48(42);
   gravity = -0.5f * 100.0f;
   bounding_box.min.x = 0;
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
   bounding_box.max.x = 320;
   bounding_box.max.y = 240;
   for (int i = 0 ; i < MAX_SPRITES ; i++) {
-    entities[i].sprite = binocle_sprite_from_material(&material);
+    entities[i].sprite = *binocle_sprite_from_material(material);
     entities[i].pos.x = (float)lrand48()/RAND_MAX * bounding_box.max.x;
     entities[i].pos.y = (float)lrand48()/RAND_MAX * bounding_box.max.y;
     entities[i].sub_pos.x = 0;
@@ -161,10 +161,10 @@ int main(int argc, char *argv[])
   font_image = binocle_image_load(font_image_filename);
   font_texture = binocle_texture_from_image(font_image);
   font_material = binocle_material_new();
-  font_material.texture = &font_texture;
-  font_material.shader = &shader;
-  font->material = &font_material;
-  font_sprite = binocle_sprite_from_material(&font_material);
+  font_material->albedo_texture = font_texture;
+  font_material->shader = shader;
+  font->material = font_material;
+  font_sprite = binocle_sprite_from_material(font_material);
   font_sprite_pos.x = 0;
   font_sprite_pos.y = -256;
 
