@@ -32,9 +32,9 @@
 #define DESIGN_WIDTH 504
 #define DESIGN_HEIGHT 143
 
-binocle_window window;
+binocle_window *window;
 binocle_input input;
-binocle_viewport_adapter adapter;
+binocle_viewport_adapter *adapter;
 binocle_camera camera;
 binocle_gd gd;
 binocle_shader *shader;
@@ -44,31 +44,31 @@ binocle_image *image;
 binocle_texture *texture;
 binocle_sprite *sprite;
 binocle_material *material;
-binocle_render_target render_target;
+binocle_render_target *render_target;
 binocle_shader *screen_shader;
 
 void main_loop() {
-  binocle_window_begin_frame(&window);
-  float dt = binocle_window_get_frame_time(&window) / 1000.0f;
+  binocle_window_begin_frame(window);
+  float dt = binocle_window_get_frame_time(window) / 1000.0f;
 
   binocle_input_update(&input);
 
   if (input.resized) {
     kmVec2 oldWindowSize;
-    oldWindowSize.x = window.width;
-    oldWindowSize.y = window.height;
-    window.width = input.newWindowSize.x;
-    window.height = input.newWindowSize.y;
+    oldWindowSize.x = window->width;
+    oldWindowSize.y = window->height;
+    window->width = input.newWindowSize.x;
+    window->height = input.newWindowSize.y;
     // Update the pixel-perfect rescaling viewport adapter
     binocle_viewport_adapter_reset(camera.viewport_adapter, oldWindowSize, input.newWindowSize);
     input.resized = false;
   }
 
   // Set the render target we will draw to
-  binocle_gd_set_render_target(&render_target);
+  binocle_gd_set_render_target(render_target);
 
   // Clear the render target with red color
-  binocle_window_clear(&window);
+  binocle_window_clear(window);
 
   // By default we scale our logo by 1/3
   kmVec2 scale;
@@ -94,7 +94,7 @@ void main_loop() {
   binocle_sprite_draw(sprite, &gd, x, y, &viewport, 0, &scale, &camera);
 
   // Gets the viewport calculated by the adapter
-  kmAABB2 vp = binocle_viewport_adapter_get_viewport(adapter);
+  kmAABB2 vp = binocle_viewport_adapter_get_viewport(*adapter);
   float vp_x = vp.min.x;
   float vp_y = vp.min.y;
   // Reset the render target to the screen
@@ -106,12 +106,12 @@ void main_loop() {
   binocle_gd_set_uniform_float2(screen_shader, "resolution", DESIGN_WIDTH,
                                 DESIGN_HEIGHT);
   binocle_gd_set_uniform_mat4(screen_shader, "transform", identity_matrix);
-  binocle_gd_set_uniform_float2(screen_shader, "scale", adapter.inverse_multiplier, adapter.inverse_multiplier);
+  binocle_gd_set_uniform_float2(screen_shader, "scale", adapter->inverse_multiplier, adapter->inverse_multiplier);
   binocle_gd_set_uniform_float2(screen_shader, "viewport", vp_x, vp_y);
-  binocle_gd_draw_quad_to_screen(screen_shader, render_target);
+  binocle_gd_draw_quad_to_screen(screen_shader, *render_target);
 
-  binocle_window_refresh(&window);
-  binocle_window_end_frame(&window);
+  binocle_window_refresh(window);
+  binocle_window_end_frame(window);
 }
 
 int main(int argc, char *argv[])
@@ -122,10 +122,10 @@ int main(int argc, char *argv[])
   binocle_data_dir = binocle_sdl_assets_dir();
 
   window = binocle_window_new(DESIGN_WIDTH, DESIGN_HEIGHT, "Binocle Render Target Example");
-  binocle_window_set_background_color(&window, binocle_color_red());
-  binocle_window_set_minimum_size(&window, DESIGN_WIDTH, DESIGN_HEIGHT);
-  adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING, BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window.original_width, window.original_height, window.original_width, window.original_height);
-  camera = binocle_camera_new(&adapter);
+  binocle_window_set_background_color(window, binocle_color_red());
+  binocle_window_set_minimum_size(window, DESIGN_WIDTH, DESIGN_HEIGHT);
+  adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING, BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window->original_width, window->original_height, window->original_width, window->original_height);
+  camera = binocle_camera_new(adapter);
   input = binocle_input_new();
 
   char vert[1024];
@@ -166,6 +166,7 @@ int main(int argc, char *argv[])
   binocle_image_destroy(image);
   binocle_shader_destroy(shader);
   binocle_shader_destroy(screen_shader);
+  binocle_viewport_adapter_destroy(adapter);
   free(binocle_data_dir);
   binocle_app_destroy(&app);
 }
