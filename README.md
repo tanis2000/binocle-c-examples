@@ -11,6 +11,7 @@ This is a collection of example projects for [Binocle C](https://github.com/tani
 | lua         | Lua binding example (uses FFI)                                     |
 | model       | 3D model loading and rendering                                     |
 | pbr         | Physics Based Rendering                                            |
+| physics     | 3D physics using Newton Dynamics (macOS only)
 | rendertarget| How to use a render target                                         |
 | spatialhash | Collision detection using 2D spatial hash for braodphase detection |
 | spritebatch | Sprite batching                                                    |
