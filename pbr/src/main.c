@@ -31,7 +31,7 @@
 #define DESIGN_WIDTH 800
 #define DESIGN_HEIGHT 600
 
-binocle_window window;
+binocle_window *window;
 binocle_input input;
 binocle_camera_3d camera;
 binocle_gd gd;
@@ -224,7 +224,7 @@ void draw_light(kmVec3 position, kmAABB2 viewport) {
 
   kmMat4 projectionMatrix;
   kmMat4Identity(&projectionMatrix);
-  kmMat4PerspectiveProjection(&projectionMatrix, camera.fov_y, viewport.max.x / viewport.max.y, camera.near /*camera.near + camera.position.z*/, camera.far /*camera.position.z + camera.far*/);
+  kmMat4PerspectiveProjection(&projectionMatrix, camera.fov_y, viewport.max.x / viewport.max.y, camera.near_distance /*camera.near + camera.position.z*/, camera.far_distance /*camera.position.z + camera.far*/);
 
   kmMat4 viewMatrix;
   kmMat4Identity(&viewMatrix);
@@ -306,7 +306,7 @@ void draw_pbr_mesh(binocle_gd *gd, const struct binocle_mesh *mesh, kmAABB2 view
 
   kmMat4 projectionMatrix;
   kmMat4Identity(&projectionMatrix);
-  kmMat4PerspectiveProjection(&projectionMatrix, camera->fov_y, viewport.max.x / viewport.max.y, camera->near /*camera->near + camera->position.z*/, camera->far /*camera->position.z + camera->far*/);
+  kmMat4PerspectiveProjection(&projectionMatrix, camera->fov_y, viewport.max.x / viewport.max.y, camera->near_distance /*camera->near + camera->position.z*/, camera->far_distance /*camera->position.z + camera->far*/);
 
   kmMat4 viewMatrix;
   kmMat4Identity(&viewMatrix);
@@ -351,16 +351,16 @@ void draw_pbr_mesh(binocle_gd *gd, const struct binocle_mesh *mesh, kmAABB2 view
 }
 
 void main_loop() {
-  binocle_window_begin_frame(&window);
-  float dt = binocle_window_get_frame_time(&window) / 1000.0f;
+  binocle_window_begin_frame(window);
+  float dt = binocle_window_get_frame_time(window) / 1000.0f;
   elapsed_time += dt;
 
   binocle_input_update(&input);
 
   if (input.resized) {
-    kmVec2 oldWindowSize = {.x = window.width, .y = window.height};
-    window.width = input.newWindowSize.x;
-    window.height = input.newWindowSize.y;
+    kmVec2 oldWindowSize = {.x = window->width, .y = window->height};
+    window->width = input.newWindowSize.x;
+    window->height = input.newWindowSize.y;
     input.resized = false;
   }
 
@@ -414,8 +414,8 @@ void main_loop() {
   kmAABB2 viewport;
   viewport.min.x = 0;
   viewport.min.y = 0;
-  viewport.max.x = window.width;
-  viewport.max.y = window.height;
+  viewport.max.x = window->width;
+  viewport.max.y = window->height;
 
   binocle_gd_apply_viewport(viewport);
   binocle_gd_apply_shader(&gd, shader);
@@ -457,8 +457,8 @@ void main_loop() {
     draw_light(pointLightPositions[i], viewport);
   }
 
-  binocle_window_refresh(&window);
-  binocle_window_end_frame(&window);
+  binocle_window_refresh(window);
+  binocle_window_end_frame(window);
 }
 
 int main(int argc, char *argv[])
@@ -469,7 +469,7 @@ int main(int argc, char *argv[])
   binocle_data_dir = binocle_sdl_assets_dir();
 
   window = binocle_window_new(DESIGN_WIDTH, DESIGN_HEIGHT, "Binocle 3D Model Example");
-  binocle_window_set_background_color(&window, binocle_color_white());
+  binocle_window_set_background_color(window, binocle_color_white());
   kmVec3 camera_pos;
   camera_pos.x = 0;
   camera_pos.y = 0;
