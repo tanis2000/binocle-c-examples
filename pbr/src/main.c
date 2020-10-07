@@ -27,6 +27,7 @@
 #include "binocle_bitmapfont.h"
 #include "binocle_ecs.h"
 #include "binocle_app.h"
+#include "binocle_collision.h"
 
 #define DESIGN_WIDTH 800
 #define DESIGN_HEIGHT 600
@@ -78,6 +79,9 @@ static kmVec3 pointLightPositions[] = {
   {.x = 0.0f, .y = 0.0f, .z = -2.0f} // back
 };
 
+kmVec3 mouse_position;
+kmVec3 ray_end_position;
+
 void setup_lights() {
   binocle_gd_apply_shader(&gd, shader);
   GLint tex_id;
@@ -93,6 +97,7 @@ void setup_lights() {
   glCheck(glUniform1i(tex_id, 4));
   binocle_gd_set_uniform_vec3(shader, "viewPos", camera.position);
   //binocle_gd_set_uniform_float(*shader, "material.shininess", 32.0f);
+  /*
   {
     // directional light
     kmVec3 direction;
@@ -116,6 +121,7 @@ void setup_lights() {
     binocle_gd_set_uniform_vec3(shader, "dirLight.diffuse", diffuse);
     binocle_gd_set_uniform_vec3(shader, "dirLight.specular", specular);
   }
+   */
   {
     // point light 1
     kmVec3 ambient = {.x = 0.05f, .y = 0.05f, .z = 0.05f};
@@ -169,6 +175,7 @@ void setup_lights() {
     binocle_gd_set_uniform_float(shader, "pointLights[3].quadratic", 0.032);
   }
   // spotLight
+  /*
   {
     binocle_gd_set_uniform_vec3(shader, "spotLight.position", camera.position);
     binocle_gd_set_uniform_vec3(shader, "spotLight.direction", camera.front);
@@ -193,6 +200,7 @@ void setup_lights() {
     binocle_gd_set_uniform_float(shader, "spotLight.cutOff", cosf(kmDegreesToRadians(12.5f)));
     binocle_gd_set_uniform_float(shader, "spotLight.outerCutOff", cosf(kmDegreesToRadians(15.0f)));
   }
+   */
 }
 
 void draw_light(kmVec3 position, kmAABB2 viewport) {
@@ -350,6 +358,42 @@ void draw_pbr_mesh(binocle_gd *gd, const struct binocle_mesh *mesh, kmAABB2 view
   glCheck(glBindBuffer(GL_ARRAY_BUFFER, 0));
 }
 
+void do_hit_test(int mouse_x, int mouse_y, const struct binocle_mesh *mesh, kmAABB2 viewport, struct binocle_camera_3d *camera) {
+  kmVec3 origin;
+  kmVec3Zero(&origin);
+  kmVec3 direction;
+  kmVec3Zero(&direction);
+
+  kmMat4 modelMatrix;
+  kmMat4Identity(&modelMatrix);
+  kmMat4Multiply(&modelMatrix, &modelMatrix, &mesh->transform);
+
+  binocle_log_info("Mouse X: %d Y:%d", mouse_x, mouse_y);
+
+  binocle_camera_3d_screen_to_world_ray(camera, mouse_x, mouse_y, viewport, &direction);
+  origin.x = camera->position.x;
+  origin.y = camera->position.y;
+  origin.z = camera->position.z;
+  binocle_log_info("Ori6 X: %f Y:%f Z:%f", origin.x, origin.y, origin.z);
+  binocle_log_info("Dir6 X: %f Y:%f Z:%f", direction.x, direction.y, direction.z);
+
+  mouse_position.x = origin.x;
+  mouse_position.y = origin.y;
+  mouse_position.z = origin.z;
+  ray_end_position.x = origin.x + direction.x;
+  ray_end_position.y = origin.y + direction.y;
+  ray_end_position.z = origin.z + direction.z;
+  float intersection_distance;
+
+  // The sphere has a size of 2 units centered in origin, so it extends [-1, 1] in all directions
+  kmVec3 aabb_min;
+  kmVec3 aabb_max;
+  binocle_model_calculate_mesh_bounding_box(mesh, &aabb_min, &aabb_max);
+  if (binocle_collision_ray_cast_obb(origin, direction, aabb_min, aabb_max, modelMatrix, &intersection_distance)) {
+    binocle_log_info("HIT! distance: %f", intersection_distance);
+  }
+}
+
 void main_loop() {
   binocle_window_begin_frame(window);
   float dt = binocle_window_get_frame_time(window) / 1000.0f;
@@ -383,15 +427,15 @@ void main_loop() {
   }
 
   if (binocle_input_is_key_pressed(&input, KEY_E)) {
-    binocle_camera_3d_rotate(&camera, 0.0f, 30.0 * dt, 0.0f);
+    binocle_camera_3d_rotate(&camera, 0.0f, 30.0f * dt, 0.0f);
   } else if (binocle_input_is_key_pressed(&input, KEY_Q)) {
-    binocle_camera_3d_rotate(&camera, 0.0f, -30.0 * dt, 0.0f);
+    binocle_camera_3d_rotate(&camera, 0.0f, -30.0f * dt, 0.0f);
   }
 
   if (binocle_input_is_key_pressed(&input, KEY_T)) {
-    binocle_camera_3d_rotate(&camera, 30.0 * dt, 0.0f, 0.0f);
+    binocle_camera_3d_rotate(&camera, 30.0f * dt, 0.0f, 0.0f);
   } else if (binocle_input_is_key_pressed(&input, KEY_G)) {
-    binocle_camera_3d_rotate(&camera, -30.0 * dt, 0.0f, 0.0f);
+    binocle_camera_3d_rotate(&camera, -30.0f * dt, 0.0f, 0.0f);
   }
 
   if (binocle_input_is_key_pressed(&input, KEY_1)) {
@@ -409,14 +453,19 @@ void main_loop() {
     kmMat4Inverse(&camera.inverse_transform_matrix, &camera.transform_matrix);
   }
 
-  binocle_gd_clear(binocle_color_black());
-
   kmAABB2 viewport;
   viewport.min.x = 0;
   viewport.min.y = 0;
   viewport.max.x = window->width;
   viewport.max.y = window->height;
 
+  if (binocle_input_is_mouse_pressed(input, MOUSE_LEFT)) {
+    int mouse_x = binocle_input_get_mouse_x(input);
+    int mouse_y = binocle_input_get_mouse_y(input);
+    do_hit_test(mouse_x, mouse_y, &model.meshes[0], viewport, &camera);
+  }
+
+  binocle_gd_clear(binocle_color_black());
   binocle_gd_apply_viewport(viewport);
   binocle_gd_apply_shader(&gd, shader);
   //binocle_gd_draw_test_triangle(shader);
@@ -456,6 +505,9 @@ void main_loop() {
   for (int i = 0 ; i < 4 ; i++) {
     draw_light(pointLightPositions[i], viewport);
   }
+
+  draw_light(mouse_position, viewport);
+  draw_light(ray_end_position, viewport);
 
   binocle_window_refresh(window);
   binocle_window_end_frame(window);
