@@ -20,7 +20,6 @@ This is a collection of example projects for [Binocle C](https://github.com/tani
 
 Not all of the examples have been ported to the new backend. The following still need to be finished:
 
-- basic
 - lua
 - model
 - pbr
