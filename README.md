@@ -16,6 +16,18 @@ This is a collection of example projects for [Binocle C](https://github.com/tani
 | spatialhash | Collision detection using 2D spatial hash for braodphase detection |
 | spritebatch | Sprite batching                                                    |
 
+## Status
+
+Not all of the examples have been ported to the new backend. The following still need to be finished:
+
+- basic
+- lua
+- model
+- pbr
+- physics
+- spatialhas
+- spritebatch
+
 ## License
 
 The MIT License (MIT)
