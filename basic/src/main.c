@@ -52,14 +52,6 @@ typedef struct screen_shader_vs_params_t {
   kmMat4 transform;
 } screen_shader_vs_params_t;
 
-typedef struct state_t {
-  struct {
-    binocle_pipeline pip;
-    binocle_bindings bind;
-    binocle_pass_action action;
-  } display;
-} state_t;
-
 binocle_app app;
 binocle_window *window;
 binocle_input input;
@@ -74,7 +66,6 @@ binocle_sprite *sprite;
 binocle_material *material;
 binocle_shader default_shader;
 binocle_shader screen_shader;
-state_t state;
 
 void main_loop() {
   binocle_window_begin_frame(window);
@@ -100,34 +91,10 @@ void main_loop() {
 
   binocle_sprite_draw(sprite, &gd, x, y, &viewport, 0, &scale, &camera);
 
-  screen_shader_vs_params_t screen_vs_params;
-  screen_shader_fs_params_t screen_fs_params;
-  kmMat4Identity(&screen_vs_params.transform);
-  screen_fs_params.resolution[0] = DESIGN_WIDTH;
-  screen_fs_params.resolution[1] = DESIGN_HEIGHT;
-  screen_fs_params.scale[0] = 1;
-  screen_fs_params.scale[1] = 1;
-
   // Gets the viewport calculated by the adapter
   kmAABB2 vp = binocle_viewport_adapter_get_viewport(*adapter);
-  float vp_x = vp.min.x;
-  float vp_y = vp.min.y;
-  screen_fs_params.viewport[0] = vp_x;
-  screen_fs_params.viewport[1] = vp_y;
 
-  binocle_gd_render(&gd);
-
-  state.display.bind.fs_images[0] = gd.offscreen.render_target;
-
-  binocle_backend_begin_default_pass(&state.display.action, window->width, window->height);
-  binocle_backend_apply_pipeline(state.display.pip);
-  binocle_backend_apply_bindings(&state.display.bind);
-  binocle_backend_apply_uniforms(BINOCLE_SHADERSTAGE_VS, 0, &BINOCLE_RANGE(screen_vs_params));
-  binocle_backend_apply_uniforms(BINOCLE_SHADERSTAGE_FS, 0, &BINOCLE_RANGE(screen_fs_params));
-  binocle_backend_draw(0, 6, 1);
-  binocle_backend_end_pass();
-
-  binocle_backend_commit();
+  binocle_gd_render(&gd, window, DESIGN_WIDTH, DESIGN_HEIGHT, vp);
 
   binocle_window_refresh(window);
   binocle_window_end_frame(window);
@@ -251,83 +218,7 @@ int main(int argc, char *argv[])
   material->shader = default_shader;
   sprite = binocle_sprite_from_material(material);
 
-  binocle_gd_setup_default_pipeline(&gd, DESIGN_WIDTH, DESIGN_HEIGHT, default_shader);
-
-  // Clear screen action for the actual screen
-  binocle_color clear_color = binocle_color_green();
-  binocle_pass_action default_action = {
-    .colors[0] = {
-      .action = BINOCLE_ACTION_CLEAR,
-      .value = {
-        .r = clear_color.r,
-        .g = clear_color.g,
-        .b = clear_color.b,
-        .a = clear_color.a,
-      }
-    }
-  };
-  state.display.action = default_action;
-
-  // Pipeline state object for the screen (default) pass
-  state.display.pip = binocle_backend_make_pipeline(&(binocle_pipeline_desc){
-    .layout = {
-      .attrs = {
-        [0] = { .format = BINOCLE_VERTEXFORMAT_FLOAT3 }, // position
-        [1] = { .format = BINOCLE_VERTEXFORMAT_FLOAT4 }, // color
-        [2] = { .format = BINOCLE_VERTEXFORMAT_FLOAT2 }, // texture uv
-      }
-    },
-    .shader = screen_shader,
-    .index_type = BINOCLE_INDEXTYPE_UINT16,
-#if !defined(BINOCLE_GL)
-    .depth = {
-      .pixel_format = BINOCLE_PIXELFORMAT_NONE,
-      .compare = BINOCLE_COMPAREFUNC_NEVER,
-      .write_enabled = false,
-    },
-    .stencil = {
-      .enabled = false,
-    },
-#endif
-    .colors = {
-#ifdef BINOCLE_GL
-      [0] = { .pixel_format = BINOCLE_PIXELFORMAT_RGBA8 }
-#else
-      [0] = { .pixel_format = BINOCLE_PIXELFORMAT_BGRA8 }
-#endif
-    }
-  });
-
-  float vertices[] = {
-    /* pos                  color                       uvs */
-    -1.0f, -1.0f, 0.0f,    1.0f, 1.0f, 1.0f, 1.0f,     0.0f, 0.0f,
-    1.0f, -1.0f, 0.0f,    1.0f, 1.0f, 1.0f, 1.0f,     1.0f, 0.0f,
-    1.0f,  1.0f, 0.0f,    1.0f, 1.0f, 1.0f, 1.0f,     1.0f, 1.0f,
-    -1.0f,  1.0f, 0.0f,    1.0f, 1.0f, 1.0f, 1.0f,     0.0f, 1.0f,
-  };
-  binocle_buffer_desc vbuf_desc = {
-    .data = BINOCLE_RANGE(vertices)
-  };
-  binocle_buffer vbuf = binocle_backend_make_buffer(&vbuf_desc);
-
-  uint16_t indices[] = {
-    0, 1, 2,  0, 2, 3,
-  };
-  binocle_buffer_desc ibuf_desc = {
-    .type = BINOCLE_BUFFERTYPE_INDEXBUFFER,
-    .data = BINOCLE_RANGE(indices)
-  };
-  binocle_buffer ibuf = binocle_backend_make_buffer(&ibuf_desc);
-
-  state.display.bind = (binocle_bindings){
-    .vertex_buffers = {
-      [0] = vbuf,
-    },
-    .index_buffer = ibuf,
-    .fs_images = {
-//      [0] = render_target,
-    }
-  };
+  binocle_gd_setup_default_pipeline(&gd, DESIGN_WIDTH, DESIGN_HEIGHT, default_shader, screen_shader);
 
 #ifdef __EMSCRIPTEN__
   emscripten_set_main_loop(main_loop, 0, 1);
