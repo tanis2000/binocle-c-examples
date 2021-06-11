@@ -1,8 +1,8 @@
 #version 120
 // Input vertex attributes
 attribute vec3 vertexPosition;
-attribute vec2 vertexTCoord;
 attribute vec4 vertexColor;
+attribute vec2 vertexTCoord;
 attribute vec3 vertexNormal;
 
 // Input uniform values
