@@ -104,6 +104,15 @@ typedef struct state_t {
     default_shader_fs_uniforms_t fs_uni;
     binocle_buffer vbuf;
   } main;
+  struct {
+    binocle_pass_action action;
+    binocle_pipeline pip;
+    binocle_bindings bind;
+    default_shader_vs_uniforms_t vs_uni;
+    default_shader_fs_uniforms_t fs_uni;
+    binocle_buffer vbuf;
+    binocle_buffer ibuf;
+  } lamp;
 } state_t;
 
 binocle_window *window;
@@ -154,7 +163,7 @@ kmVec3 ray_end_position;
 
 void setup_default_pipeline() {
   // Clear screen action for the main scene
-  binocle_color off_clear_color = binocle_color_azure();
+  binocle_color off_clear_color = binocle_color_black();
   binocle_pass_action action = {
     .colors[0] = {
       .action = BINOCLE_ACTION_CLEAR,
@@ -197,8 +206,58 @@ void setup_default_pipeline() {
       [0] = state.main.vbuf,
     },
   };
+}
 
+void setup_lamp_pipeline() {
+  // Clear screen action for the lamp scene
+  binocle_color off_clear_color = binocle_color_green();
+  binocle_pass_action action = {
+    .colors[0] = {
+      .action = BINOCLE_ACTION_CLEAR,
+      .value = {
+        .r = off_clear_color.r,
+        .g = off_clear_color.g,
+        .b = off_clear_color.b,
+        .a = off_clear_color.a,
+      }
+    }
+  };
+  state.lamp.action = action;
 
+  // Pipeline state object for the screen (default) pass
+  state.lamp.pip = binocle_backend_make_pipeline(&(binocle_pipeline_desc){
+    .layout = {
+      .attrs = {
+        [0] = { .format = BINOCLE_VERTEXFORMAT_FLOAT3 }, // position
+      }
+    },
+    .shader = lamp_shader,
+    .index_type = BINOCLE_INDEXTYPE_UINT32,
+    .colors = {
+      [0] = { .pixel_format = BINOCLE_PIXELFORMAT_RGBA8 },
+    }
+  });
+
+  binocle_buffer_desc vbuf_desc = {
+    .type = BINOCLE_BUFFERTYPE_VERTEXBUFFER,
+    .usage = BINOCLE_USAGE_STREAM,
+    .size = sizeof(GLfloat) * 3 * MAX_VERTICES,
+  };
+  state.lamp.vbuf = binocle_backend_make_buffer(&vbuf_desc);
+
+  binocle_buffer_desc ibuf_desc = {
+    .type = BINOCLE_BUFFERTYPE_INDEXBUFFER,
+    .usage = BINOCLE_USAGE_STREAM,
+    .size = sizeof(GLfloat) * MAX_VERTICES,
+  };
+  state.lamp.ibuf = binocle_backend_make_buffer(&ibuf_desc);
+
+  state.lamp.bind = (binocle_bindings){
+    .vertex_buffers = {
+      [0] = state.lamp.vbuf,
+    },
+    .index_buffer = state.lamp.ibuf,
+  };
 }
 
 void setup_lights() {
@@ -344,7 +403,6 @@ void setup_lights() {
    */
 }
 
-/*
 void draw_light(kmVec3 position, kmAABB2 viewport) {
   static GLfloat g_quad_vertex_buffer_data[] = {
     1.0f, -1.0f, -1.0f,
@@ -395,33 +453,53 @@ void draw_light(kmVec3 position, kmAABB2 viewport) {
   kmMat4Multiply(&modelMatrix, &modelMatrix, &trans);
   kmMat4Multiply(&modelMatrix, &modelMatrix, &scale);
 
-  GLuint quad_vertexbuffer;
-  glCheck(glGenBuffers(1, &quad_vertexbuffer));
-  glCheck(glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer));
-  glCheck(glBufferData(GL_ARRAY_BUFFER, sizeof(g_quad_vertex_buffer_data), g_quad_vertex_buffer_data, GL_STATIC_DRAW));
+  for (int i = 0 ; i < 16 ; i++) {
+    state.lamp.vs_uni.viewMatrix[i] = viewMatrix.mat[i];
+    state.lamp.vs_uni.projectionMatrix[i] = projectionMatrix.mat[i];
+    state.lamp.vs_uni.modelMatrix[i] = modelMatrix.mat[i];
+  }
 
-  GLint pos_id;
-  glCheck(pos_id = glGetAttribLocation(lamp_shader->program_id, "vertexPosition"));
-  glCheck(glVertexAttribPointer(pos_id, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 3, 0));
-  glCheck(glEnableVertexAttribArray(pos_id));
+  const uint32_t vbuf_offset = binocle_backend_append_buffer(state.lamp.vbuf, &(binocle_range){ .ptr=g_quad_vertex_buffer_data, .size= 3 * 8 * sizeof(GLfloat) });
+  const uint32_t ibuf_offset = binocle_backend_append_buffer(state.lamp.ibuf, &(binocle_range){ .ptr=index_buffer_data, .size= 3 * 12 * sizeof(GLuint) });
 
-  binocle_gd_set_uniform_mat4(lamp_shader, "projectionMatrix", projectionMatrix);
-  binocle_gd_set_uniform_mat4(lamp_shader, "viewMatrix", viewMatrix);
-  binocle_gd_set_uniform_mat4(lamp_shader, "modelMatrix", modelMatrix);
+  state.lamp.bind.vertex_buffer_offsets[0] = vbuf_offset;
+  state.lamp.bind.index_buffer_offset = ibuf_offset;
 
-  GLuint quad_indexbuffer;
-  glCheck(glGenBuffers(1, &quad_indexbuffer));
-  glCheck(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, quad_indexbuffer));
-  glCheck(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_buffer_data), index_buffer_data, GL_STATIC_DRAW));
-  glCheck(glDrawElements(GL_TRIANGLES, 12 * 3, GL_UNSIGNED_INT, 0));
+  binocle_backend_apply_pipeline(state.lamp.pip);
+  binocle_backend_apply_bindings(&state.lamp.bind);
+  binocle_backend_apply_uniforms(BINOCLE_SHADERSTAGE_VS, 0, &BINOCLE_RANGE(state.lamp.vs_uni));
+//  binocle_backend_apply_uniforms(BINOCLE_SHADERSTAGE_FS, 0, &BINOCLE_RANGE(state.lamp.fs_uni));
+  binocle_backend_draw(0, 3 * 12, 1);
 
-  glCheck(glDisableVertexAttribArray(pos_id));
-  glCheck(glBindBuffer(GL_ARRAY_BUFFER, 0));
-  glCheck(glDeleteBuffers(1, &quad_vertexbuffer));
-  glCheck(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
-  glCheck(glDeleteBuffers(1, &quad_indexbuffer));
+
+
+
+//  GLuint quad_vertexbuffer;
+//  glCheck(glGenBuffers(1, &quad_vertexbuffer));
+//  glCheck(glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer));
+//  glCheck(glBufferData(GL_ARRAY_BUFFER, sizeof(g_quad_vertex_buffer_data), g_quad_vertex_buffer_data, GL_STATIC_DRAW));
+//
+//  GLint pos_id;
+//  glCheck(pos_id = glGetAttribLocation(lamp_shader->program_id, "vertexPosition"));
+//  glCheck(glVertexAttribPointer(pos_id, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 3, 0));
+//  glCheck(glEnableVertexAttribArray(pos_id));
+//
+//  binocle_gd_set_uniform_mat4(lamp_shader, "projectionMatrix", projectionMatrix);
+//  binocle_gd_set_uniform_mat4(lamp_shader, "viewMatrix", viewMatrix);
+//  binocle_gd_set_uniform_mat4(lamp_shader, "modelMatrix", modelMatrix);
+//
+//  GLuint quad_indexbuffer;
+//  glCheck(glGenBuffers(1, &quad_indexbuffer));
+//  glCheck(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, quad_indexbuffer));
+//  glCheck(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_buffer_data), index_buffer_data, GL_STATIC_DRAW));
+//  glCheck(glDrawElements(GL_TRIANGLES, 12 * 3, GL_UNSIGNED_INT, 0));
+//
+//  glCheck(glDisableVertexAttribArray(pos_id));
+//  glCheck(glBindBuffer(GL_ARRAY_BUFFER, 0));
+//  glCheck(glDeleteBuffers(1, &quad_vertexbuffer));
+//  glCheck(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+//  glCheck(glDeleteBuffers(1, &quad_indexbuffer));
 }
-*/
 
 void apply_pbr_texture(binocle_material *material) {
   state.main.bind.fs_images[0] = material->albedo_texture;
@@ -575,9 +653,6 @@ void main_loop() {
     do_hit_test(mouse_x, mouse_y, &model.meshes[0], viewport, &camera);
   }
 
-  binocle_gd_clear(binocle_color_black());
-  binocle_gd_apply_viewport(viewport);
-  binocle_gd_apply_shader(&gd, shader);
   //binocle_gd_draw_test_triangle(shader);
   //binocle_gd_draw_test_cube(shader);
 
@@ -615,9 +690,9 @@ void main_loop() {
   draw_pbr_mesh(&gd, &model.meshes[0], viewport, &camera);
 
 //  binocle_gd_apply_shader(&gd, lamp_shader);
-//  for (int i = 0 ; i < 4 ; i++) {
-//    draw_light(pointLightPositions[i], viewport);
-//  }
+  for (int i = 0 ; i < 4 ; i++) {
+    draw_light(pointLightPositions[i], viewport);
+  }
 
 //  draw_light(mouse_position, viewport);
 //  draw_light(ray_end_position, viewport);
@@ -804,6 +879,7 @@ int main(int argc, char *argv[])
   model.meshes[0].material->ao_texture = ao_image;
 
   setup_default_pipeline();
+  setup_lamp_pipeline();
 
 #ifdef __EMSCRIPTEN__
   emscripten_set_main_loop(main_loop, 0, 1);
