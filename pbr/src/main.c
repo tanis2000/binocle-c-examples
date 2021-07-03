@@ -191,6 +191,10 @@ void setup_default_pipeline() {
     .index_type = BINOCLE_INDEXTYPE_NONE,
     .colors = {
       [0] = { .pixel_format = BINOCLE_PIXELFORMAT_RGBA8 },
+    },
+    .cull_mode = BINOCLE_CULLMODE_FRONT,
+    .depth = {
+      .compare = BINOCLE_COMPAREFUNC_ALWAYS,
     }
   });
 
@@ -235,6 +239,10 @@ void setup_lamp_pipeline() {
     .index_type = BINOCLE_INDEXTYPE_UINT32,
     .colors = {
       [0] = { .pixel_format = BINOCLE_PIXELFORMAT_RGBA8 },
+    },
+    .cull_mode = BINOCLE_CULLMODE_FRONT,
+    .depth = {
+      .compare = BINOCLE_COMPAREFUNC_ALWAYS,
     }
   });
 
@@ -514,10 +522,6 @@ void draw_pbr_mesh(binocle_gd *gd, const struct binocle_mesh *mesh, kmAABB2 view
     binocle_log_warning("Missing camera for call to draw_pbr_mesh");
     return;
   }
-  binocle_gd_apply_3d_gl_states();
-  binocle_gd_apply_viewport(viewport);
-  binocle_gd_apply_blend_mode(mesh->material->blend_mode);
-  binocle_gd_apply_shader(gd, mesh->material->shader);
   apply_pbr_texture(mesh->material);
 
   kmMat4 projectionMatrix;
@@ -694,8 +698,8 @@ void main_loop() {
     draw_light(pointLightPositions[i], viewport);
   }
 
-//  draw_light(mouse_position, viewport);
-//  draw_light(ray_end_position, viewport);
+  draw_light(mouse_position, viewport);
+  draw_light(ray_end_position, viewport);
 
   binocle_backend_end_pass();
 
