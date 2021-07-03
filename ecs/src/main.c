@@ -231,7 +231,6 @@ int main(int argc, char *argv[])
 {
   app = binocle_app_new();
   binocle_app_init(&app);
-  binocle_sdl_init();
   window = binocle_window_new(DESIGN_WIDTH, DESIGN_HEIGHT, "Binocle ECS");
   binocle_window_set_background_color(window, binocle_color_azure());
   binocle_window_set_minimum_size(window, DESIGN_WIDTH, DESIGN_HEIGHT);
@@ -450,7 +449,6 @@ int main(int argc, char *argv[])
   binocle_sprite_destroy(font_sprite);
   binocle_gd_destroy(&gd);
   binocle_app_destroy(&app);
-  binocle_sdl_exit();
 }
 
 

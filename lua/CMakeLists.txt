@@ -36,7 +36,7 @@ SET(VERSION_PATCH "0")
 SET(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 if (WIN32)
-    set(BINOCLE_LINK_LIBRARIES binocle-static luajit-5.1)
+    set(BINOCLE_LINK_LIBRARIES binocle-static lua) # luajit-5.1
 else()
     set(BINOCLE_LINK_LIBRARIES binocle-static lua)
 endif()
@@ -160,8 +160,9 @@ endif ()
 target_link_libraries(${PROJECT_NAME} ${BINOCLE_LINK_LIBRARIES})
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
-
+if (NOT MSVC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
+endif()
 
 if (APPLE)
     set_target_properties(${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_PRODUCT_NAME "${PROJECT_NAME}")
