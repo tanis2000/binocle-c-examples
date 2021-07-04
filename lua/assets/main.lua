@@ -9,12 +9,12 @@ io.write("image: " .. tostring(img) .. "\n")
 local tex = texture.from_image(img)
 io.write("tex: " .. tostring(tex) .. "\n")
 
-local shd = shader.load_from_file(assets_dir .. "default.vert", assets_dir .. "default.frag")
-io.write("shader: " .. tostring(shd) .. "\n")
+--local shd = shader.load_from_file(assets_dir .. "default.vert", assets_dir .. "default.frag")
+--io.write("shader: " .. tostring(shd) .. "\n")
 local mat = material.new()
 
 material.set_texture(mat, tex)
-material.set_shader(mat, shd)
+--material.set_shader(mat, shd)
 io.write("material: " .. tostring(mat) .. "\n")
 
 local player = sprite.from_material(mat)
@@ -61,7 +61,7 @@ function on_update(dt)
         player_y = player_y - 100 * dt
     end
 
-    sprite.draw(player, gd, player_x, player_y, viewport, 0, scale, camera)
+    sprite.draw(player, gd, player_x, player_y, viewport, 0, scale, camera_mgr)
 end
 
 io.write("End of main.lua\n");

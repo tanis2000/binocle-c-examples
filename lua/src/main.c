@@ -18,6 +18,9 @@
 #include <binocle_sprite.h>
 #include <backend/binocle_material.h>
 #include <binocle_lua.h>
+#include <binocle_input_wrap.h>
+#include <binocle_camera_wrap.h>
+#include <binocle_viewport_adapter_wrap.h>
 
 #define BINOCLE_MATH_IMPL
 #include "binocle_math.h"
@@ -82,10 +85,28 @@ int lua_set_globals() {
   lua_pushlightuserdata(lua.L, (void *)&adapter->viewport);
   lua_setglobal(lua.L, "viewport");
 
-  lua_pushlightuserdata(lua.L, (void *)&camera);
-  lua_setglobal(lua.L, "camera");
+//  lua_pushlightuserdata(lua.L, (void *)&camera);
+//  lua_setglobal(lua.L, "camera");
 
-  lua_pushlightuserdata(lua.L, (void *)&input);
+  l_binocle_camera_t *l_camera = lua_newuserdata(lua.L, sizeof(l_binocle_camera_t));
+  lua_getfield(lua.L, LUA_REGISTRYINDEX, "binocle_camera");
+  lua_setmetatable(lua.L, -2);
+  SDL_memset(l_camera, 0, sizeof(*l_camera));
+  l_camera->camera = SDL_malloc(sizeof(binocle_camera));
+  SDL_memcpy(l_camera->camera, &camera, sizeof(binocle_camera));
+//  lua_pushlightuserdata(lua.L, (void *)l_camera);
+  lua_setglobal(lua.L, "camera_mgr");
+
+//  lua_pushlightuserdata(lua.L, (void *)&input);
+//  lua_setglobal(lua.L, "input_mgr");
+
+  l_binocle_input_t *l_input = lua_newuserdata(lua.L, sizeof(l_binocle_input_t));
+  lua_getfield(lua.L, LUA_REGISTRYINDEX, "binocle_input");
+  lua_setmetatable(lua.L, -2);
+  SDL_memset(l_input, 0, sizeof(*l_input));
+  l_input->input = SDL_malloc(sizeof(binocle_input));
+  SDL_memcpy(l_input->input, &input, sizeof(binocle_input));
+//  lua_pushlightuserdata(lua.L, (void *)l_input);
   lua_setglobal(lua.L, "input_mgr");
 
   return 0;
