@@ -49,10 +49,10 @@ struct SpotLight {
 
 #define NR_POINT_LIGHTS 4
 
-varying vec2 tcoord;
-varying vec4 color;
-varying vec3 normal;
 varying vec3 position;
+varying vec4 color;
+varying vec2 tcoord;
+varying vec3 normal;
 
 uniform vec3 viewPos;
 uniform DirLight dirLight;

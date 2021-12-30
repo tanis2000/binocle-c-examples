@@ -132,8 +132,9 @@ endif ()
 target_link_libraries(${PROJECT_NAME} ${BINOCLE_LINK_LIBRARIES})
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
-
+if (NOT MSVC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+endif()
 
 if (APPLE)
     set_target_properties(${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_PRODUCT_NAME "${PROJECT_NAME}")

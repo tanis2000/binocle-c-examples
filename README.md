@@ -4,22 +4,22 @@ This is a collection of example projects for [Binocle C](https://github.com/tani
 
 ## Repository content
 
-| Folder      | Description                                                        |
-|-------------|:-------------------------------------------------------------------|
-| basic       | Basic example                                                      |
-| ecs         | Entity Component System                                            |
-| lua         | Lua binding example (uses FFI)                                     |
-| model       | 3D model loading and rendering                                     |
-| pbr         | Physics Based Rendering                                            |
-| physics     | 3D physics using Newton Dynamics (macOS only)
-| rendertarget| How to use a render target                                         |
-| spatialhash | Collision detection using 2D spatial hash for braodphase detection |
-| spritebatch | Sprite batching                                                    |
+| Folder      | Description                                                        | Supported backends |
+|-------------|:-------------------------------------------------------------------|:-------------------|
+| basic       | Basic example                                                      | OpenGL, Metal      |
+| ecs         | Entity Component System                                            | OpenGL, Metal      |
+| lua         | Lua binding example (uses FFI)                                     | OpenGL             |
+| model       | 3D model loading and rendering                                     | OpenGL             |
+| pbr         | Physics Based Rendering                                            | OpenGL             |
+| physics     | 3D physics using Newton Dynamics (macOS only)                      | OpenGL             |
+| rendertarget| How to use a render target                                         | OpenGL             |
+| spatialhash | Collision detection using 2D spatial hash for braodphase detection | OpenGL             |
+| spritebatch | Sprite batching                                                    | OpenGL             |
 
 ## License
 
 The MIT License (MIT)
-Copyright (c) 2015-2020 Valerio Santinelli
+Copyright (c) 2015-2021 Valerio Santinelli
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
