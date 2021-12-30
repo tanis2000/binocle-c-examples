@@ -712,7 +712,8 @@ void main_loop() {
 int main(int argc, char *argv[])
 {
   app = binocle_app_new();
-  binocle_app_init(&app);
+  binocle_app_desc_t app_desc = { 0 };
+  binocle_app_init(&app, &app_desc);
 
   binocle_data_dir = binocle_sdl_assets_dir();
 
