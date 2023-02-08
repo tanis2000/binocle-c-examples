@@ -9,7 +9,7 @@ if("${CMAKE_VERSION}" VERSION_GREATER 3.1)
 endif()
 
 # cmake modules directory
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/../binocle-c/build/cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/../binocle-c/cmake")
 
 # Enables CMake database for YCM
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
@@ -109,34 +109,19 @@ foreach(dir ${dirs})
   message(STATUS "dir='${dir}'")
 endforeach()
 
-if (NOT DEFINED BINOCLE_DATA_DIR)
-    if (APPLE)
-        if (IOS)
-            set(BINOCLE_DATA_DIR "")
-        else ()
-            set(BINOCLE_DATA_DIR "../Resources/")
-        endif ()
-    elseif (WIN32)
-        set(BINOCLE_DATA_DIR "../../../../../../assets/")
-    elseif (EMSCRIPTEN)
-        # TODO: make this relative but also make sure that it
-        # becomes relative in BinocleWeb.cmake as they have to be the same
-        set(BINOCLE_DATA_DIR "/Users/tanis/Documents/binocle-c/assets/")
-    endif ()
-endif ()
-message("Data dir is ${BINOCLE_DATA_DIR}")
-
-
-CONFIGURE_FILE(${PROJECT_SOURCE_DIR}/src/sys_config.h.cmake ${PROJECT_SOURCE_DIR}/src/sys_config.h)
-SET_SOURCE_FILES_PROPERTIES(${PROJECT_SOURCE_DIR}/src/sys_config.h PROPERTIES GENERATED TRUE)
-
 if (APPLE)
     #if(IOS)
     set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-    file(GLOB RESOURCES_LIST ${CMAKE_SOURCE_DIR}/assets/*)
-    set(RESOURCES
-            ${RESOURCES_LIST}
-            )
+    file(GLOB_RECURSE RESOURCES "${CMAKE_SOURCE_DIR}/assets/*")
+    foreach(RES_FILE ${RESOURCES})
+        message("RES_FILE: ${RES_FILE}")
+        file(RELATIVE_PATH RES_PATH "${CMAKE_SOURCE_DIR}/assets" ${RES_FILE})
+        message("RES_PATH: ${RES_PATH}")
+        get_filename_component(RES_FOLDER ${RES_PATH} DIRECTORY)
+        message("RES_FOLDER: ${RES_FOLDER}")
+        set_property(SOURCE ${RES_FILE} PROPERTY MACOSX_PACKAGE_LOCATION "Resources/${RES_FOLDER}")
+    endforeach(RES_FILE)
+    #set_property(SOURCE ${RESOURCES} PROPERTY MACOSX_PACKAGE_LOCATION "Resources")
     message("Resources list: ${RESOURCES}")
     #endif()
 endif ()
@@ -186,10 +171,10 @@ if (APPLE)
     # 			PROPERTIES
     # 			MACOSX_PACKAGE_LOCATION Resources
     # )
-    set_source_files_properties(
-            ${RESOURCES}
-            PROPERTIES
-            MACOSX_PACKAGE_LOCATION Resources)
+#    set_source_files_properties(
+#            ${RESOURCES}
+#            PROPERTIES
+#            MACOSX_PACKAGE_LOCATION Resources)
     if (IOS)
         set_target_properties(
                 ${PROJECT_NAME}
