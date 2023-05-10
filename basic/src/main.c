@@ -88,14 +88,15 @@ void main_loop() {
   }
 
   kmAABB2 viewport = binocle_camera_get_viewport(camera);
-  sg_image_info info = sg_query_image_info(sprite->material->albedo_texture);
+  sg_image_desc info = sg_query_image_desc(sprite->material->albedo_texture);
   kmVec2 scale;
   scale.x = (float)DESIGN_WIDTH / (float)info.width;
   scale.y = (float)DESIGN_HEIGHT / (float)info.height;
   int64_t x = (int64_t)((DESIGN_WIDTH - ((float)info.width * scale.x)) / 2.0f);
   int64_t y = (int64_t)((DESIGN_HEIGHT - ((float)info.height * scale.y)) / 2.0f);
 
-  binocle_sprite_draw(sprite, &gd, x, y, &viewport, 0, &scale, &camera);
+  sg_color white = binocle_color_white();
+  binocle_sprite_draw(sprite, &gd, x, y, &viewport, 0, &scale, &camera, 0, &white);
 
   // Gets the viewport calculated by the adapter
   kmAABB2 vp = binocle_viewport_adapter_get_viewport(*adapter);
