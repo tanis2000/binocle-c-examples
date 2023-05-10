@@ -91,7 +91,7 @@ void main_loop() {
   sg_image_desc info = sg_query_image_desc(sprite->material->albedo_texture);
   kmVec2 scale;
   scale.x = (float)DESIGN_WIDTH / (float)info.width;
-  scale.y = (float)DESIGN_HEIGHT / (float)info.height;
+  scale.y = (float)DESIGN_HEIGHT / (float)info.width;
   int64_t x = (int64_t)((DESIGN_WIDTH - ((float)info.width * scale.x)) / 2.0f);
   int64_t y = (int64_t)((DESIGN_HEIGHT - ((float)info.height * scale.y)) / 2.0f);
 
@@ -210,7 +210,7 @@ int main(int argc, char *argv[])
     .fs.byte_code = screen_fs_bytecode,
     .fs.byte_code_size = sizeof(screen_fs_bytecode),
 #endif
-    .fs.images[0] = { .name = "texture", .image_type = SG_IMAGETYPE_2D},
+    .fs.images[0] = { .name = "tex0", .image_type = SG_IMAGETYPE_2D},
     .fs.uniform_blocks[0] = {
       .size = sizeof(screen_shader_fs_params_t),
       .uniforms = {
