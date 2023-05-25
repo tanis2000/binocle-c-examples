@@ -9,7 +9,7 @@ if("${CMAKE_VERSION}" VERSION_GREATER 3.1)
 endif()
 
 # cmake modules directory
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/../binocle-c/build/cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/../binocle-c/cmake")
 
 # Enables CMake database for YCM
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
@@ -28,6 +28,12 @@ include(CMakeToolsHelpers OPTIONAL)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
 
+include(../binocle-c/CMakeOptions.txt)
+
+if(BINOCLE_LUAJIT)
+    add_definitions(-DBINOCLE_LUAJIT)
+endif ()
+
 include(BinocleUtils)
 
 SET(VERSION_MAJOR "0")
@@ -35,11 +41,7 @@ SET(VERSION_MINOR "1")
 SET(VERSION_PATCH "0")
 SET(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
-if (WIN32)
-    set(BINOCLE_LINK_LIBRARIES binocle-static lua) # luajit-5.1
-else()
-    set(BINOCLE_LINK_LIBRARIES binocle-static lua)
-endif()
+set(BINOCLE_LINK_LIBRARIES binocle-static lua)
 
 if (MSVC)
 	message("Including Windows defines")
@@ -56,8 +58,6 @@ elseif(ANDROID)
 	message("Including Android defines")
 	include(BinocleAndroid)
 elseif(EMSCRIPTEN)
-    message("Setting BINOCLE_DATA_DIR before including web settings")
-    set(BINOCLE_DATA_DIR "../assets/")
     message("Including Emscripten defines")
 	include(BinocleWeb)
 endif()
@@ -70,19 +70,25 @@ file(GLOB_RECURSE HEADERS ${PROJECT_SOURCE_DIR}/src/*.h)
 message("Linking with the following libraries: ${BINOCLE_LINK_LIBRARIES}")
 
 include_directories(
-    ${PROJECT_SOURCE_DIR}/src
-    ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps
-    ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/sdl/include
-    ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/sdl_mixer
-    ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/stb_image
-    ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/physfs
-    ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/sokol
-    ${PROJECT_SOURCE_DIR}/../binocle-c/src/binocle/core
+        ${PROJECT_SOURCE_DIR}/src
+        ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps
+        ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/sdl/include
+        ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/sdl_mixer
+        ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/stb_image
+        ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/luajit/src
+        ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/physfs
+        ${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/sokol
+        ${PROJECT_SOURCE_DIR}/../binocle-c/src/binocle/core
 )
 
 if (APPLE)
-    #include_directories(${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/luajit/src)
-    include_directories(${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/lua/src)
+    # we're using lua instead of luajit on macos to be able to test with valgrind
+    if (BINOCLE_JIT)
+        include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/luajit/src)
+    else ()
+        include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/lua/src)
+    endif ()
+    include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/sdl/include)
     if (IOS)
         include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/sdl/include/configs/default)
     else ()
@@ -92,19 +98,21 @@ if (APPLE)
 endif ()
 
 if (ANDROID)
-    include_directories(${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/luajit/src)
+    include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/sdl/include)
+    include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/luajit/src)
     include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/sdl/include/configs/default)
 endif ()
 
 if (WIN32)
-    include_directories(${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/luajit/src)
+    include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/sdl/include)
+    include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/lua/src)
     include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/sdl/include/configs/windows)
     include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/glew/include)
 endif ()
 
 if (EMSCRIPTEN)
+    include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/lua/src)
     include_directories(${CMAKE_SOURCE_DIR}/binocle-c/src/deps/sdl/include/configs/default)
-    include_directories(${PROJECT_SOURCE_DIR}/../binocle-c/src/deps/lua/src)
 endif ()
 
 file(GLOB SOURCE_FILES
@@ -119,32 +127,19 @@ foreach(dir ${dirs})
   message(STATUS "dir='${dir}'")
 endforeach()
 
-if (NOT DEFINED BINOCLE_DATA_DIR)
-    if (APPLE)
-        if (IOS)
-            set(BINOCLE_DATA_DIR "")
-        else ()
-            set(BINOCLE_DATA_DIR "../Resources/")
-        endif ()
-    elseif (WIN32)
-        set(BINOCLE_DATA_DIR "../../../../../../assets/")
-    elseif (EMSCRIPTEN)
-        # Nothing to do as this is defined above
-    endif ()
-endif ()
-message("Data dir is ${BINOCLE_DATA_DIR}")
-
-
-CONFIGURE_FILE(${PROJECT_SOURCE_DIR}/src/sys_config.h.cmake ${PROJECT_SOURCE_DIR}/src/sys_config.h)
-SET_SOURCE_FILES_PROPERTIES(${PROJECT_SOURCE_DIR}/src/sys_config.h PROPERTIES GENERATED TRUE)
-
 if (APPLE)
     #if(IOS)
     set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-    file(GLOB RESOURCES_LIST ${CMAKE_SOURCE_DIR}/assets/*)
-    set(RESOURCES
-            ${RESOURCES_LIST}
-            )
+    file(GLOB_RECURSE RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/assets/*")
+    foreach(RES_FILE ${RESOURCES})
+        message("RES_FILE: ${RES_FILE}")
+        file(RELATIVE_PATH RES_PATH "${CMAKE_CURRENT_SOURCE_DIR}/assets" ${RES_FILE})
+        message("RES_PATH: ${RES_PATH}")
+        get_filename_component(RES_FOLDER ${RES_PATH} DIRECTORY)
+        message("RES_FOLDER: ${RES_FOLDER}")
+        set_property(SOURCE ${RES_FILE} PROPERTY MACOSX_PACKAGE_LOCATION "Resources/${RES_FOLDER}")
+    endforeach(RES_FILE)
+    #set_property(SOURCE ${RESOURCES} PROPERTY MACOSX_PACKAGE_LOCATION "Resources")
     message("Resources list: ${RESOURCES}")
     #endif()
 endif ()
@@ -195,10 +190,10 @@ if (APPLE)
     # 			PROPERTIES
     # 			MACOSX_PACKAGE_LOCATION Resources
     # )
-    set_source_files_properties(
-            ${RESOURCES}
-            PROPERTIES
-            MACOSX_PACKAGE_LOCATION Resources)
+#    set_source_files_properties(
+#            ${RESOURCES}
+#            PROPERTIES
+#            MACOSX_PACKAGE_LOCATION Resources)
     if (IOS)
         set_target_properties(
                 ${PROJECT_NAME}

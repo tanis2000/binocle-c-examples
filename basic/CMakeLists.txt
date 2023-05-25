@@ -98,8 +98,8 @@ if (EMSCRIPTEN)
 endif ()
 
 file(GLOB SOURCE_FILES
-${CMAKE_SOURCE_DIR}/src/*.c
-${CMAKE_SOURCE_DIR}/src/*.h
+${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
+${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
         )
 
 message("List of source files: ${SOURCE_FILES}")
@@ -112,10 +112,10 @@ endforeach()
 if (APPLE)
     #if(IOS)
     set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-    file(GLOB_RECURSE RESOURCES "${CMAKE_SOURCE_DIR}/assets/*")
+    file(GLOB_RECURSE RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/assets/*")
     foreach(RES_FILE ${RESOURCES})
         message("RES_FILE: ${RES_FILE}")
-        file(RELATIVE_PATH RES_PATH "${CMAKE_SOURCE_DIR}/assets" ${RES_FILE})
+        file(RELATIVE_PATH RES_PATH "${CMAKE_CURRENT_SOURCE_DIR}/assets" ${RES_FILE})
         message("RES_PATH: ${RES_PATH}")
         get_filename_component(RES_FOLDER ${RES_PATH} DIRECTORY)
         message("RES_FOLDER: ${RES_FOLDER}")

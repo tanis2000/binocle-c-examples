@@ -210,10 +210,10 @@ void main_loop() {
 
   char fps_string[256];
   sprintf(fps_string, "FPS: %lld", last_fps);
-  binocle_bitmapfont_draw_string(font, fps_string, 16, &gd, 10, window->original_height - 32, adapter->viewport, binocle_color_black(), view_matrix);
+  binocle_bitmapfont_draw_string(font, fps_string, 16, &gd, 10, window->original_height - 32, adapter->viewport, binocle_color_black(), view_matrix, 0);
   char sprites_string[256];
   sprintf(sprites_string, "SPRITES: %lld", MAX_SPRITES);
-  binocle_bitmapfont_draw_string(font, sprites_string, 16, &gd, 10, window->original_height - 64, adapter->viewport, binocle_color_black(), view_matrix);
+  binocle_bitmapfont_draw_string(font, sprites_string, 16, &gd, 10, window->original_height - 64, adapter->viewport, binocle_color_black(), view_matrix, 0);
 
   // Gets the viewport calculated by the adapter
   kmAABB2 vp = binocle_viewport_adapter_get_viewport(*adapter);

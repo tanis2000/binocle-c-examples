@@ -1,21 +1,46 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="CMakePresetLoader"><![CDATA[{
+  "useNewFormat": true
+}]]></component>
+  <component name="CMakeReloadState">
+    <option name="reloaded" value="true" />
+  </component>
+  <component name="CMakeRunConfigurationManager">
     <generated>
-      <config projectName="Project" targetName="spatialhash" />
-      <config projectName="Project" targetName="spritebatch" />
-      <config projectName="Project" targetName="ecs" />
+      <config projectName="binocle-c-examples" targetName="pbr" />
+      <config projectName="binocle-c-examples" targetName="rendertarget" />
+      <config projectName="binocle-c-examples" targetName="basic" />
+      <config projectName="binocle-c-examples" targetName="spatialhash" />
+      <config projectName="binocle-c-examples" targetName="physics" />
+      <config projectName="binocle-c-examples" targetName="lua" />
+      <config projectName="binocle-c-examples" targetName="model" />
+      <config projectName="binocle-c-examples" targetName="spritebatch" />
+      <config projectName="binocle-c-examples" targetName="ecs" />
     </generated>
   </component>
   <component name="CMakeSettings">
     <configurations>
-      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" />
+      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" />
     </configurations>
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d8d1616d-0df5-47fb-84c1-8037bb00967e" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/model/assets/cube.blend" beforeDir="false" afterPath="$PROJECT_DIR$/model/assets/cube.blend" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/assets/cube.blend1" beforeDir="false" afterPath="$PROJECT_DIR$/model/assets/cube.blend1" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/basic/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/basic/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ecs/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ecs/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ecs/src/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/ecs/src/main.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lua/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/lua/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lua/assets/default.frag" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lua/assets/default.vert" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lua/assets/screen.frag" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lua/assets/screen.vert" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lua/src/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/lua/src/main.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,6 +61,12 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="MacroExpansionManager">
+    <option name="directoryName" value="xdfgnaf4" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
   <component name="ProjectFrameBounds">
     <option name="y" value="23" />
     <option name="width" value="1440" />
@@ -45,44 +76,92 @@
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
-    <option name="showExcludedFiles" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">
-    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
-    <property name="nodejs_npm_path_reset_for_default_project" value="true" />
-    <property name="settings.editor.selected.configurable" value="project.propVCSSupport.Mappings" />
-  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "cf.advertisement.text.has.clang-format": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "git-widget-placeholder": "master",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
   <component name="RunManager" selected="CMake Application.ecs">
-    <configuration name="ecs" type="CMakeRunConfiguration" factoryName="Application" WORKING_DIR="file://$PROJECT_DIR$/cmake-build-debug/ecs-prefix/src/ecs-build/ecs.app/Contents/MacOS" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="ecs" CONFIG_NAME="Debug" RUN_PATH="$PROJECT_DIR$/cmake-build-debug/ecs-prefix/src/ecs-build/ecs.app/Contents/MacOS/ecs">
+    <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
+      <method v="2">
+        <option name="CLION.EXTERNAL.BUILD" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="basic" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" WORKING_DIR="file://$CMakeCurrentBuildDir$" PASS_PARENT_ENVS_2="true" PROJECT_NAME="binocle-c-examples" TARGET_NAME="basic" CONFIG_NAME="Debug" RUN_PATH="$PROJECT_DIR$/cmake-build-debug/basic/src/basic.app/Contents/MacOS/basic">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
-    <configuration name="spatialhash" type="CMakeRunConfiguration" factoryName="Application" WORKING_DIR="file://$PROJECT_DIR$/cmake-build-debug/spatialhash-prefix/src/spatialhash-build/spatialhash.app/Contents/MacOS" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="spatialhash" CONFIG_NAME="Debug" RUN_PATH="$PROJECT_DIR$/cmake-build-debug/spatialhash-prefix/src/spatialhash-build/spatialhash.app/Contents/MacOS/spatialhash">
+    <configuration name="ecs" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" WORKING_DIR="file://$CMakeCurrentBuildDir$" PASS_PARENT_ENVS_2="true" PROJECT_NAME="binocle-c-examples" TARGET_NAME="ecs" CONFIG_NAME="Debug" RUN_PATH="$PROJECT_DIR$/cmake-build-debug/ecs-prefix/src/ecs-build/ecs.app/Contents/MacOS/ecs">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
-    <configuration name="spritebatch" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="spritebatch" CONFIG_NAME="Debug">
+    <configuration name="lua" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="binocle-c-examples" TARGET_NAME="lua" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="model" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="binocle-c-examples" TARGET_NAME="model" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="pbr" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="binocle-c-examples" TARGET_NAME="pbr" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="physics" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="binocle-c-examples" TARGET_NAME="physics" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="rendertarget" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="binocle-c-examples" TARGET_NAME="rendertarget" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="spatialhash" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" WORKING_DIR="file://$PROJECT_DIR$/cmake-build-debug/spatialhash-prefix/src/spatialhash-build/spatialhash.app/Contents/MacOS" PASS_PARENT_ENVS_2="true" PROJECT_NAME="binocle-c-examples" TARGET_NAME="spatialhash" CONFIG_NAME="Debug" RUN_PATH="$PROJECT_DIR$/cmake-build-debug/spatialhash-prefix/src/spatialhash-build/spatialhash.app/Contents/MacOS/spatialhash">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="spritebatch" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="binocle-c-examples" TARGET_NAME="spritebatch" CONFIG_NAME="Debug">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
     <list>
+      <item itemvalue="CMake Application.basic" />
       <item itemvalue="CMake Application.ecs" />
+      <item itemvalue="CMake Application.lua" />
+      <item itemvalue="CMake Application.model" />
+      <item itemvalue="CMake Application.pbr" />
+      <item itemvalue="CMake Application.physics" />
+      <item itemvalue="CMake Application.rendertarget" />
       <item itemvalue="CMake Application.spatialhash" />
       <item itemvalue="CMake Application.spritebatch" />
     </list>
   </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="SvnConfiguration">
     <configuration />
   </component>
@@ -100,11 +179,18 @@
       <workItem from="1561026584934" duration="29000" />
       <workItem from="1562686445418" duration="97000" />
       <workItem from="1580668593645" duration="23000" />
+      <workItem from="1685028502216" duration="3120000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="1" />
+    <option name="version" value="3" />
+  </component>
+  <component name="VCPKGProject">
+    <isAutomaticEditVcpkgJson value="false" />
+    <isAutomaticCheckingOnLaunch value="false" />
+    <isAutomaticFoundErrors value="true" />
+    <isAutomaticFoundErrors value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <ignored-roots>
