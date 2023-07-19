@@ -28,20 +28,7 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d8d1616d-0df5-47fb-84c1-8037bb00967e" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/basic/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/basic/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ecs/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ecs/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ecs/src/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/ecs/src/main.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lua/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/lua/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lua/assets/default.frag" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lua/assets/default.vert" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lua/assets/screen.frag" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lua/assets/screen.vert" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lua/src/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/lua/src/main.c" afterDir="false" />
-    </list>
+    <list default="true" id="d8d1616d-0df5-47fb-84c1-8037bb00967e" name="Default Changelist" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -90,6 +77,7 @@
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -98,7 +86,7 @@
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
-  <component name="RunManager" selected="CMake Application.ecs">
+  <component name="RunManager" selected="CMake Application.model">
     <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
         <option name="CLION.EXTERNAL.BUILD" enabled="true" />
@@ -179,7 +167,7 @@
       <workItem from="1561026584934" duration="29000" />
       <workItem from="1562686445418" duration="97000" />
       <workItem from="1580668593645" duration="23000" />
-      <workItem from="1685028502216" duration="3120000" />
+      <workItem from="1685028502216" duration="4624000" />
     </task>
     <servers />
   </component>

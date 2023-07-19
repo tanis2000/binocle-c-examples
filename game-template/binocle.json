@@ -1,0 +1,6 @@
+{
+    "project": {
+        "name": "game-template",
+        "engine": "binocle-c"
+    }
+}
