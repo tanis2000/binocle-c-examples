@@ -21,6 +21,7 @@
 #define SCALE (2)
 #define DESIGN_WIDTH (320)
 #define DESIGN_HEIGHT (240)
+#define MAX_CACHED_IMAGES (256)
 
 /// The handle of a cooldown
 typedef struct cooldown_handle_t {
@@ -101,10 +102,22 @@ typedef struct pools_t {
   entity_t *entities;
 } pools_t;
 
+typedef struct cached_image_t {
+  sg_image img;
+  const char *filename;
+} cached_image_t;
+
+typedef struct cache_t {
+  cached_image_t images[MAX_CACHED_IMAGES];
+  size_t images_num;
+} cache_t;
+
 /// The main game state
 typedef struct game_t {
   pools_t pools;
   sg_shader default_shader;
+  float dt;
+  cache_t cache;
 } game_t;
 
 #endif //GAME_TEMPLATE_TYPES_H

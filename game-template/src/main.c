@@ -31,6 +31,7 @@
 #include "types.h"
 #include "cooldown.h"
 #include "entity.h"
+#include "cache.h"
 
 //#define GAMELOOP 1
 #define START_SPRITES 1024
@@ -64,20 +65,12 @@ typedef struct screen_shader_vs_params_t {
   kmMat4 transform;
 } screen_shader_vs_params_t;
 
-typedef struct entity_t {
-  binocle_sprite *sprite;
-  kmVec2 pos;
-  kmVec2 sub_pos;
-  kmVec2 speed;
-} entity_t;
-
 binocle_app app;
 char *binocle_data_dir = NULL;
 binocle_window *window;
 binocle_input input;
 binocle_viewport_adapter *adapter;
 binocle_camera camera;
-entity_t *entities;
 binocle_gd gd;
 binocle_bitmapfont *font;
 sg_image font_image;
@@ -95,46 +88,64 @@ uint32_t number_of_sprites = START_SPRITES;
 
 game_t game;
 
-void create_entity(entity_t *entity) {
-  entity->sprite = binocle_sprite_from_material(material);
-  entity->pos.x = (float)rand()/RAND_MAX * bounding_box.max.x;
-  entity->pos.y = (float)rand()/RAND_MAX * bounding_box.max.y;
-  entity->sub_pos.x = 0;
-  entity->sub_pos.y = 0;
-  entity->speed.x = (float)rand()/RAND_MAX * 500.0f;
-  entity->speed.y = ((float)rand()/RAND_MAX * 500.0f) - 250.0f;
+void create_entity() {
+  entity_handle_t en = entity_make(&game.pools);
+  entity_load_image(&game.pools, en, "wabbit_alpha.png", 26, 37);
+  entity_set_pos_pixel(&game.pools, en, (float)rand()/RAND_MAX * bounding_box.max.x, (float)rand()/RAND_MAX * bounding_box.max.y);
+  entity_set_speed(&game.pools, en, (float)rand()/RAND_MAX * 500.0f, ((float)rand()/RAND_MAX * 500.0f) - 250.0f);
 }
 
-void update_entity(entity_t *entity, float dt) {
-  entity->pos.x += entity->speed.x * dt;
-  entity->pos.y += entity->speed.y * dt;
-  entity->speed.y += gravity;
+void update_entity(entity_handle_t handle, entity_t *entity) {
+  float dt = game.dt;
+  entity_set_pos_pixel(&game.pools, handle,
+                       entity->sprite_x + entity->speed_x * dt,
+                       entity->sprite_y + entity->speed_y * dt);
+  entity_set_speed(&game.pools, handle, entity->speed_x, entity->speed_y + gravity);
 
-  if (entity->pos.x > bounding_box.max.x) {
-    entity->speed.x *= -1.0f;
-    entity->pos.x = bounding_box.max.x;
-  } else if (entity->pos.x < bounding_box.min.x) {
-    entity->speed.x *= -1.0f;
-    entity->pos.x = bounding_box.min.x;
+  if (entity->sprite_x > bounding_box.max.x) {
+    entity_set_speed(&game.pools, handle, entity->speed_x * -1.0f, entity->speed_y);
+    entity_set_pos_pixel(&game.pools, handle,
+                         bounding_box.max.x,
+                         entity->sprite_y );
+  } else if (entity->sprite_x < bounding_box.min.x) {
+    entity_set_speed(&game.pools, handle, entity->speed_x * -1.0f, entity->speed_y);
+    entity_set_pos_pixel(&game.pools, handle,
+                         bounding_box.min.x,
+                         entity->sprite_y );
   }
 
-  if (entity->pos.y < bounding_box.min.y) {
-    entity->speed.y *= -0.8f;
-    entity->pos.y = bounding_box.min.y;
+  if (entity->sprite_y < bounding_box.min.y) {
+    entity_set_speed(&game.pools, handle, entity->speed_x, entity->speed_y * -0.8f);
+    entity_set_pos_pixel(&game.pools, handle,
+                         entity->sprite_x,
+                         bounding_box.min.y );
 
     if ((float)rand()/RAND_MAX > 0.5f) {
-      entity->speed.y -= 3.0f + (float)rand()/RAND_MAX * 4.0f;
+      entity_set_speed(&game.pools, handle, entity->speed_x, entity->speed_y - 3.0f + (float)rand()/RAND_MAX * 4.0f);
     }
-  } else if (entity->pos.y > bounding_box.max.y) {
-    entity->speed.y = 0.0f;
-    entity->pos.y = bounding_box.max.y;
+  } else if (entity->sprite_y > bounding_box.max.y) {
+    entity_set_speed(&game.pools, handle, entity->speed_x, 0.0f);
+    entity_set_pos_pixel(&game.pools, handle,
+                         entity->sprite_x,
+                         bounding_box.max.y );
   }
 
+}
+
+void update_and_draw_entity(entity_handle_t handle, entity_t *entity) {
+  update_entity(handle, entity);
+  sg_color white = binocle_color_white();
+  kmVec2 pos = (kmVec2) {
+    .x = (entity->cx + entity->xr) * GRID,
+    .y = (entity->cy + entity->yr) * GRID,
+  };
+  binocle_sprite_batch_draw(&sprite_batch, &entity->sprite->material->albedo_texture, &pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
 }
 
 void main_loop() {
   binocle_window_begin_frame(window);
   float dt = (float)binocle_window_get_frame_time(window) / 1000.0f;
+  game.dt = dt;
 
   binocle_input_update(&input);
 
@@ -146,27 +157,27 @@ void main_loop() {
     input.resized = false;
   }
 
-  if (binocle_input_is_key_pressed(&input, KEY_SPACE)) {
-    uint32_t old_number_of_sprites = number_of_sprites;
-    number_of_sprites += 256;
-    binocle_array_grow(entities, number_of_sprites);
-    for (int i = old_number_of_sprites ; i < number_of_sprites ; i++) {
-      create_entity(&entities[i]);
-    }
-  }
+//  if (binocle_input_is_key_pressed(&input, KEY_SPACE)) {
+//    uint32_t old_number_of_sprites = number_of_sprites;
+//    number_of_sprites += 256;
+//    binocle_array_grow(entities, number_of_sprites);
+//    for (int i = old_number_of_sprites ; i < number_of_sprites ; i++) {
+//      create_entity(&entities[i]);
+//    }
+//  }
 
   cooldown_system_update(&game.pools, dt);
 
-  if (!cooldown_has(&game.pools, "new_entity")) {
-    // Add one more sprite every 3 seconds
-    uint32_t old_number_of_sprites = number_of_sprites;
-    number_of_sprites += 1;
-    binocle_array_grow(entities, number_of_sprites);
-    for (int i = old_number_of_sprites ; i < number_of_sprites ; i++) {
-      create_entity(&entities[i]);
-    }
-    cooldown_set(&game.pools, "new_entity", 3, NULL);
-  }
+//  if (!cooldown_has(&game.pools, "new_entity")) {
+//    // Add one more sprite every 3 seconds
+//    uint32_t old_number_of_sprites = number_of_sprites;
+//    number_of_sprites += 1;
+//    binocle_array_grow(entities, number_of_sprites);
+//    for (int i = old_number_of_sprites ; i < number_of_sprites ; i++) {
+//      create_entity(&entities[i]);
+//    }
+//    cooldown_set(&game.pools, "new_entity", 3, NULL);
+//  }
 
 
   kmAABB2 viewport = binocle_camera_get_viewport(camera);
@@ -177,13 +188,8 @@ void main_loop() {
   kmVec2 scale;
   scale.x = 1.0f;
   scale.y = 1.0f;
-  for (int i = 0 ; i < number_of_sprites ; i++) {
-    update_entity(&entities[i], (binocle_window_get_frame_time(window) / 1000.0f));
-    sg_color white = binocle_color_white();
-//    binocle_sprite_draw(entities[i].sprite, &gd, (uint64_t)entities[i].pos.x, (uint64_t)entities[i].pos.y, &viewport, 0, &scale, &camera, 0, &white);
-    //binocle_sprite_batch_draw_position(&sprite_batch, entities[i].sprite.material->texture, entities[i].pos);
-    binocle_sprite_batch_draw(&sprite_batch, &entities[i].sprite->material->albedo_texture, &entities[i].pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
-  }
+  entity_system_update(&game.pools, update_and_draw_entity);
+
   kmMat4 view_matrix;
   kmMat4Identity(&view_matrix);
   // Gets the viewport calculated by the adapter
@@ -221,6 +227,8 @@ int main(int argc, char *argv[])
   input = binocle_input_new();
   gd = binocle_gd_new();
   binocle_gd_init(&gd, window);
+
+  game = (game_t){0};
 
 #ifdef BINOCLE_GL
   // Default shader
@@ -329,11 +337,11 @@ int main(int argc, char *argv[])
   bounding_box.max.x = 320;
   bounding_box.max.y = 240;
 
-  entity_system_init(&game.pools, 16);
+  cache_system_init();
+  entity_system_init(&game.pools, number_of_sprites);
 
-  binocle_array_set_capacity(entities, number_of_sprites);
   for (int i = 0 ; i < number_of_sprites ; i++) {
-    create_entity(&entities[i]);
+    create_entity();
   }
 
   char font_filename[1024];
@@ -356,7 +364,6 @@ int main(int argc, char *argv[])
 
   binocle_gd_setup_default_pipeline(&gd, DESIGN_WIDTH, DESIGN_HEIGHT, default_shader, screen_shader);
 
-  game = (game_t){0};
   cooldown_system_init(&game.pools, 16);
 #ifdef GAMELOOP
   binocle_game_run(window, input);

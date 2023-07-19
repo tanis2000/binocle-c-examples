@@ -8,6 +8,7 @@
 #include "binocle_array.h"
 #include "binocle_sdl.h"
 #include "binocle_log.h"
+#include "cache.h"
 
 extern struct game_t game;
 
@@ -24,6 +25,21 @@ void entity_system_shutdown(pools_t *pools) {
   free(pools->entities);
   pools->entities = NULL;
   binocle_pool_discard(&pools->entity_pool);
+}
+
+void entity_system_update(pools_t *pools, void func(entity_handle_t handle, entity_t *)) {
+  for (size_t i = 0 ; i < pools->entity_pool.size ; i++) {
+    entity_handle_t handle = {.id = pools->entities[i].slot.id};
+    entity_t *entity = &pools->entities[i];
+    if (entity->slot.state != BINOCLE_RESOURCESTATE_VALID) {
+      continue;
+    }
+    entity->sprite_x = (entity->cx + entity->xr) * GRID;
+    entity->sprite_y = (entity->cy + entity->yr) * GRID;
+    if (func != NULL) {
+      func(handle, entity);
+    }
+  }
 }
 
 static entity_handle_t entity_alloc(pools_t *pools) {
@@ -90,9 +106,9 @@ static binocle_resource_state entity_init(entity_t *en) {
   return en->slot.state;
 }
 
-static entity_t *entity_at(const pools_t *pools, uint32_t cd_id) {
-  assert(pools && (BINOCLE_INVALID_ID != cd_id));
-  int slot_index = binocle_pool_slot_index(cd_id);
+static entity_t *entity_at(const pools_t *pools, uint32_t en_id) {
+  assert(pools && (BINOCLE_INVALID_ID != en_id));
+  int slot_index = binocle_pool_slot_index(en_id);
   assert((slot_index > BINOCLE_POOL_INVALID_SLOT_INDEX) && (slot_index < pools->entity_pool.size));
   return &pools->entities[slot_index];
 }
@@ -108,8 +124,9 @@ entity_handle_t entity_make(pools_t *pools) {
   return handle;
 }
 
-void entity_load_image(entity_t *entity, const char *filename, uint32_t width, uint32_t height) {
-  sg_image img = binocle_image_load(filename);
+void entity_load_image(pools_t *pools, entity_handle_t en, const char *filename, uint32_t width, uint32_t height) {
+  entity_t *entity = entity_at(pools, en.id);
+  sg_image img = cache_load_image(filename);
   binocle_material *mat = binocle_material_new();
   mat->albedo_texture = img;
   mat->shader = game.default_shader;
@@ -126,4 +143,26 @@ void entity_load_image(entity_t *entity, const char *filename, uint32_t width, u
   }
   entity->sprite->origin.x = width * entity->pivot_x;
   entity->sprite->origin.y = width * entity->pivot_y;
+}
+
+void entity_set_pos_grid(pools_t *pools, entity_handle_t handle, int32_t x, int32_t y) {
+  entity_t *entity = entity_at(pools, handle.id);
+  entity->cx = floor(x);
+  entity->cy = floor(y);
+  entity->xr = 0.5f;
+  entity->yr = 0;
+}
+
+void entity_set_pos_pixel(pools_t *pools, entity_handle_t handle, int32_t x, int32_t y) {
+  entity_t *entity = entity_at(pools, handle.id);
+  entity->cx = x / GRID;
+  entity->cy = y / GRID;
+  entity->xr = (float)(x - entity->cx * GRID) / (float)GRID;
+  entity->yr = (float)(y - entity->cy * GRID) / (float)GRID;
+}
+
+void entity_set_speed(pools_t *pools, entity_handle_t handle, float x, float y) {
+  entity_t *entity = entity_at(pools, handle.id);
+  entity->speed_x = x;
+  entity->speed_y = y;
 }
