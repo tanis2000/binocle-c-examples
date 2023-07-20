@@ -63,8 +63,14 @@ endif ()
 
 message("Project source dir: ${PROJECT_SOURCE_DIR}")
 
-file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.c)
-file(GLOB_RECURSE HEADERS ${PROJECT_SOURCE_DIR}/src/*.h)
+file(GLOB_RECURSE SOURCES
+        ${PROJECT_SOURCE_DIR}/src/*.c
+        ${PROJECT_SOURCE_DIR}/src/**/*.c
+        )
+file(GLOB_RECURSE HEADERS
+        ${PROJECT_SOURCE_DIR}/src/*.h
+        ${PROJECT_SOURCE_DIR}/src/**/*.h
+        )
 
 message("Linking with the following libraries: ${BINOCLE_LINK_LIBRARIES}")
 
@@ -104,7 +110,9 @@ endif ()
 
 file(GLOB SOURCE_FILES
 ${CMAKE_SOURCE_DIR}/src/*.c
+${CMAKE_SOURCE_DIR}/src/**/*.c
 ${CMAKE_SOURCE_DIR}/src/*.h
+${CMAKE_SOURCE_DIR}/src/**/*.h
         )
 
 message("List of source files: ${SOURCE_FILES}")

@@ -34,7 +34,7 @@
 #include "cache.h"
 
 //#define GAMELOOP 1
-#define START_SPRITES 1024
+#define START_SPRITES 1
 
 
 #if defined(BINOCLE_MACOS) && defined(BINOCLE_METAL)
@@ -70,15 +70,11 @@ char *binocle_data_dir = NULL;
 binocle_window *window;
 binocle_input input;
 binocle_viewport_adapter *adapter;
-binocle_camera camera;
-binocle_gd gd;
 binocle_bitmapfont *font;
 sg_image font_image;
 binocle_material *font_material;
 binocle_sprite *font_sprite;
 kmVec2 font_sprite_pos;
-binocle_sprite_batch sprite_batch;
-sg_shader default_shader;
 sg_shader screen_shader;
 sg_image image;
 binocle_material *material;
@@ -92,11 +88,24 @@ void create_entity() {
   entity_handle_t en = entity_make(&game.pools);
   entity_load_image(&game.pools, en, "wabbit_alpha.png", 26, 37);
   entity_set_pos_pixel(&game.pools, en, (float)rand()/RAND_MAX * bounding_box.max.x, (float)rand()/RAND_MAX * bounding_box.max.y);
-  entity_set_speed(&game.pools, en, (float)rand()/RAND_MAX * 500.0f, ((float)rand()/RAND_MAX * 500.0f) - 250.0f);
+  entity_set_speed(&game.pools, en, (float)rand()/RAND_MAX * 2.0f, ((float)rand()/RAND_MAX * 2.0f) - 1.0f);
 }
 
 void update_entity(entity_handle_t handle, entity_t *entity) {
   float dt = game.dt;
+  entity->dx += entity->speed_x * dt * entity->time_mul;
+  entity->dy += entity->speed_y * dt * entity->time_mul;
+  if (entity->sprite_x > bounding_box.max.x) {
+    entity->speed_x = -fabsf(entity->speed_x);
+  } else if (entity->sprite_x < bounding_box.min.x) {
+    entity->speed_x = fabsf(entity->speed_x);
+  }
+  if (entity->sprite_y < bounding_box.min.y) {
+    entity->speed_y = -fabsf(entity->speed_y);
+  } else if (entity->sprite_y > bounding_box.max.y) {
+    entity->speed_y = fabsf(entity->speed_y);
+  }
+  /*
   entity_set_pos_pixel(&game.pools, handle,
                        entity->sprite_x + entity->speed_x * dt,
                        entity->sprite_y + entity->speed_y * dt);
@@ -129,17 +138,17 @@ void update_entity(entity_handle_t handle, entity_t *entity) {
                          entity->sprite_x,
                          bounding_box.max.y );
   }
-
+*/
 }
 
-void update_and_draw_entity(entity_handle_t handle, entity_t *entity) {
-  update_entity(handle, entity);
-  sg_color white = binocle_color_white();
-  kmVec2 pos = (kmVec2) {
-    .x = (entity->cx + entity->xr) * GRID,
-    .y = (entity->cy + entity->yr) * GRID,
-  };
-  binocle_sprite_batch_draw(&sprite_batch, &entity->sprite->material->albedo_texture, &pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
+void draw_entity(entity_handle_t handle, entity_t *entity) {
+  entity_draw(handle);
+//  sg_color white = binocle_color_white();
+//  kmVec2 pos = (kmVec2) {
+//    .x = (entity->cx + entity->xr) * GRID,
+//    .y = (entity->cy + entity->yr) * GRID,
+//  };
+//  binocle_sprite_batch_draw(&sprite_batch, &entity->sprite->material->albedo_texture, &pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
 }
 
 void main_loop() {
@@ -180,15 +189,17 @@ void main_loop() {
 //  }
 
 
-  kmAABB2 viewport = binocle_camera_get_viewport(camera);
+  kmAABB2 viewport = binocle_camera_get_viewport(game.gfx.camera);
   kmMat4 matrix;
   kmMat4Identity(&matrix);
-  binocle_sprite_batch_begin(&sprite_batch, binocle_camera_get_viewport(camera), BINOCLE_SPRITE_SORT_MODE_DEFERRED, &default_shader, &matrix);
+  binocle_sprite_batch_begin(&game.gfx.sprite_batch, binocle_camera_get_viewport(game.gfx.camera), BINOCLE_SPRITE_SORT_MODE_DEFERRED, &game.gfx.default_shader, &matrix);
 
   kmVec2 scale;
   scale.x = 1.0f;
   scale.y = 1.0f;
-  entity_system_update(&game.pools, update_and_draw_entity);
+  entity_system_pre_update(&game.pools, NULL);
+  entity_system_update(&game.pools, update_entity, dt);
+  entity_system_post_update(&game.pools, draw_entity);
 
   kmMat4 view_matrix;
   kmMat4Identity(&view_matrix);
@@ -199,11 +210,11 @@ void main_loop() {
 
   char fps[256];
   sprintf(fps, "FPS:%llu COUNT: %d PRESS SPACE TO ADD", binocle_window_get_fps(window), number_of_sprites);
-  binocle_bitmapfont_draw_string(font, fps, 16, &gd, 20, 20, viewport, binocle_color_white(), view_matrix, 1);
+  binocle_bitmapfont_draw_string(font, fps, 16, &game.gfx.gd, 20, 20, viewport, binocle_color_white(), view_matrix, 1);
 
-  binocle_sprite_batch_end(&sprite_batch, viewport);
+  binocle_sprite_batch_end(&game.gfx.sprite_batch, viewport);
 
-  binocle_gd_render(&gd, window, DESIGN_WIDTH, DESIGN_HEIGHT, vp, view_matrix, 1.0f);
+  binocle_gd_render(&game.gfx.gd, window, DESIGN_WIDTH, DESIGN_HEIGHT, vp, view_matrix, 1.0f);
 
   binocle_window_refresh(window);
   binocle_window_end_frame(window);
@@ -212,6 +223,7 @@ void main_loop() {
 
 int main(int argc, char *argv[])
 {
+  game = (game_t){0};
   binocle_app_desc_t app_desc = {0};
   app = binocle_app_new();
   binocle_app_init(&app, &app_desc);
@@ -223,12 +235,12 @@ int main(int argc, char *argv[])
   binocle_window_set_background_color(window, binocle_color_azure());
   binocle_window_set_minimum_size(window, DESIGN_WIDTH, DESIGN_HEIGHT);
   adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING, BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window->original_width, window->original_height, window->original_width, window->original_height);
-  camera = binocle_camera_new(adapter);
+  game.gfx.camera = binocle_camera_new(adapter);
   input = binocle_input_new();
-  gd = binocle_gd_new();
-  binocle_gd_init(&gd, window);
+  game.gfx.gd = binocle_gd_new();
+  binocle_gd_init(&game.gfx.gd, window);
 
-  game = (game_t){0};
+
 
 #ifdef BINOCLE_GL
   // Default shader
@@ -274,7 +286,7 @@ int main(int argc, char *argv[])
 #endif
     .fs.images[0] = { .name = "tex0", .image_type = SG_IMAGETYPE_2D},
   };
-  default_shader = sg_make_shader(&default_shader_desc);
+  game.gfx.default_shader = sg_make_shader(&default_shader_desc);
 
 #ifdef BINOCLE_GL
   // Screen shader
@@ -329,13 +341,13 @@ int main(int argc, char *argv[])
   image = binocle_image_load(filename);
   material = binocle_material_new();
   material->albedo_texture = image;
-  material->shader = default_shader;
+  material->shader = game.gfx.default_shader;
 //  srand48(42);
   gravity = -0.5f * 100.0f;
   bounding_box.min.x = 0;
   bounding_box.min.y = 0;
-  bounding_box.max.x = 320;
-  bounding_box.max.y = 240;
+  bounding_box.max.x = DESIGN_WIDTH;
+  bounding_box.max.y = DESIGN_HEIGHT;
 
   cache_system_init();
   entity_system_init(&game.pools, number_of_sprites);
@@ -353,16 +365,16 @@ int main(int argc, char *argv[])
   font_image = binocle_image_load(font_image_filename);
   font_material = binocle_material_new();
   font_material->albedo_texture = font_image;
-  font_material->shader = default_shader;
+  font_material->shader = game.gfx.default_shader;
   font->material = font_material;
   font_sprite = binocle_sprite_from_material(font_material);
   font_sprite_pos.x = 0;
   font_sprite_pos.y = -256;
 
-  sprite_batch = binocle_sprite_batch_new();
-  sprite_batch.gd = &gd;
+  game.gfx.sprite_batch = binocle_sprite_batch_new();
+  game.gfx.sprite_batch.gd = &game.gfx.gd;
 
-  binocle_gd_setup_default_pipeline(&gd, DESIGN_WIDTH, DESIGN_HEIGHT, default_shader, screen_shader);
+  binocle_gd_setup_default_pipeline(&game.gfx.gd, DESIGN_WIDTH, DESIGN_HEIGHT, game.gfx.default_shader, screen_shader);
 
   cooldown_system_init(&game.pools, 16);
 #ifdef GAMELOOP

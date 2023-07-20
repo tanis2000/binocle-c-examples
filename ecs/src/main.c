@@ -167,7 +167,7 @@ void process_player(binocle_ecs_t *ecs, void *user_data, binocle_entity_id_t ent
 }
 
 void player_subscribed(binocle_ecs_t *ecs, void *user_data, binocle_entity_id_t entity) {
-  //binocle_log_info("Player subscribed entity %lld", entity);
+  binocle_log_info("Player subscribed entity %lld", entity);
 }
 
 void main_loop() {

@@ -8,6 +8,9 @@
 #include <stdbool.h>
 #include "binocle_pool.h"
 #include "binocle_sprite.h"
+#include "binocle_ttfont.h"
+#include "binocle_camera.h"
+#include "binocle_gd.h"
 
 // TODO: particles
 // TODO: entities
@@ -115,9 +118,32 @@ typedef struct cache_t {
 /// The main game state
 typedef struct game_t {
   pools_t pools;
-  sg_shader default_shader;
   float dt;
   cache_t cache;
+  bool debug_enabled;
+  struct {
+    binocle_gd gd;
+    binocle_camera camera;
+    binocle_ttfont default_font;
+    binocle_sprite_batch sprite_batch;
+    sg_shader default_shader;
+  } gfx;
 } game_t;
+
+typedef enum LAYERS {
+  LAYER_BG = 1,
+  LAYER_MOBS = 2,
+  LAYER_HERO = 3,
+  LAYER_BULLETS = 4,
+  LAYER_FX = 5,
+  LAYER_FG = 6,
+  LAYER_TEXT = 7
+} LAYERS;
+
+typedef struct hero_t {
+  entity_handle_t handle;
+  int32_t max_health;
+  int32_t health;
+} hero_t;
 
 #endif //GAME_TEMPLATE_TYPES_H
