@@ -11,6 +11,8 @@
 #include "binocle_ttfont.h"
 #include "binocle_camera.h"
 #include "binocle_gd.h"
+#include "flecs.h"
+#include "cute_tiled.h"
 
 // TODO: particles
 // TODO: entities
@@ -121,6 +123,9 @@ typedef struct game_t {
   float dt;
   cache_t cache;
   bool debug_enabled;
+  ecs_world_t *ecs;
+  /// The level entity
+  ecs_entity_t level;
   struct {
     binocle_gd gd;
     binocle_camera camera;
@@ -128,6 +133,10 @@ typedef struct game_t {
     binocle_sprite_batch sprite_batch;
     sg_shader default_shader;
   } gfx;
+  struct {
+    ecs_entity_t draw;
+    ecs_entity_t draw_level;
+  } systems;
 } game_t;
 
 typedef enum LAYERS {
@@ -145,5 +154,85 @@ typedef struct hero_t {
   int32_t max_health;
   int32_t health;
 } hero_t;
+
+typedef struct health_t {
+  int32_t max_health;
+  int32_t health;
+  bool destroyed;
+} health_t;
+
+typedef struct graphics_t {
+  binocle_sprite *sprite;
+  binocle_subtexture *frames;
+
+  int32_t sprite_x;
+  int32_t sprite_y;
+  float sprite_scale_x;
+  float sprite_scale_y;
+  float sprite_scale_set_x;
+  float sprite_scale_set_y;
+  bool visible;
+  float depth;
+
+  float pivot_x;
+  float pivot_y;
+} graphics_t;
+
+typedef struct physics_t {
+  int32_t cx;
+  int32_t cy;
+  float xr;
+  float yr;
+
+  float dx;
+  float dy;
+  float bdx;
+  float bdy;
+
+  float gravity;
+
+  float frict;
+  float bump_frict;
+
+  int32_t dir;
+  float time_mul;
+} physics_t;
+
+typedef struct collider_t {
+  float hei;
+  float wid;
+  float radius;
+  bool has_collisions;
+} collider_t;
+
+typedef struct profile_t {
+  char *name;
+} profile_t;
+
+typedef struct node_t {
+  ecs_entity_t parent;
+} node_t;
+
+typedef struct tile_t {
+  int gid;
+  binocle_sprite *sprite;
+} tile_t;
+
+typedef struct level_t {
+  cute_tiled_map_t *map;
+  /// Collision map array
+  bool *coll_map;
+  binocle_sprite *sprite;
+  /// Tiles array
+  tile_t *tiles;
+} level_t;
+
+extern ECS_COMPONENT_DECLARE(health_t);
+extern ECS_COMPONENT_DECLARE(collider_t);
+extern ECS_COMPONENT_DECLARE(physics_t);
+extern ECS_COMPONENT_DECLARE(graphics_t);
+extern ECS_COMPONENT_DECLARE(profile_t);
+extern ECS_COMPONENT_DECLARE(node_t);
+extern ECS_COMPONENT_DECLARE(level_t);
 
 #endif //GAME_TEMPLATE_TYPES_H

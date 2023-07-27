@@ -7,4 +7,6 @@
 
 #include "types.h"
 
+ecs_entity_t hero_new();
+
 #endif //GAME_TEMPLATE_HERO_H

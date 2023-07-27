@@ -5,14 +5,28 @@
 #include "entity.h"
 #include "binocle_image.h"
 #include "backend/binocle_material.h"
-#include "binocle_array.h"
 #include "binocle_sdl.h"
 #include "binocle_log.h"
 #include "binocle_ttfont.h"
 #include "cache.h"
 #include "level.h"
+#include "stb_ds.h"
 
 extern struct game_t game;
+
+
+void draw_entities(ecs_iter_t *it) {
+  graphics_t *g = ecs_field(it, graphics_t, 1);
+  for (int i = 0 ; i < it->count; i++) {
+    if (g->visible && g->sprite != NULL) {
+      kmVec2 scale;
+      scale.x = g->sprite_scale_x;
+      scale.y = g->sprite_scale_y;
+      kmAABB2 viewport = binocle_camera_get_viewport(game.gfx.camera);
+      binocle_sprite_draw_with_sprite_batch(&game.gfx.sprite_batch, g->sprite, &game.gfx.gd, g->sprite_x, g->sprite_y, &viewport, 0, &scale, &game.gfx.camera, g->depth);
+    }
+  }
+}
 
 void entity_system_init(pools_t *pools, size_t pool_size) {
   assert(pools);
@@ -215,25 +229,24 @@ entity_handle_t entity_make(pools_t *pools) {
   return handle;
 }
 
-void entity_load_image(pools_t *pools, entity_handle_t en, const char *filename, uint32_t width, uint32_t height) {
-  entity_t *entity = entity_at(pools, en.id);
+void entity_load_image(graphics_t *g, const char *filename, uint32_t width, uint32_t height) {
   sg_image img = cache_load_image(filename);
   binocle_material *mat = binocle_material_new();
   mat->albedo_texture = img;
   mat->shader = game.gfx.default_shader;
-  entity->sprite = binocle_sprite_from_material(mat);
+  g->sprite = binocle_sprite_from_material(mat);
   sg_image_desc img_info = sg_query_image_desc(img);
   size_t num_frames = (img_info.width / width - 1) * (img_info.height / height - 1);
-  binocle_array_set_capacity(entity->frames, num_frames);
+  arrsetlen(g->frames, num_frames);
   for (size_t x = 0 ; x < img_info.width / width - 1 ; x++) {
     for (size_t y = 0 ; x < img_info.height / height - 1 ; y++) {
       binocle_subtexture frame = binocle_subtexture_with_texture(&img, x * width, y * width, width, height);
-      SDL_memcpy(&entity->sprite->subtexture, &frame, sizeof(binocle_subtexture));
-      binocle_array_push(entity->frames, frame);
+      SDL_memcpy(&g->sprite->subtexture, &frame, sizeof(binocle_subtexture));
+      arrput(g->frames, frame);
     }
   }
-  entity->sprite->origin.x = width * entity->pivot_x;
-  entity->sprite->origin.y = width * entity->pivot_y;
+  g->sprite->origin.x = width * g->pivot_x;
+  g->sprite->origin.y = width * g->pivot_y;
 }
 
 void entity_set_pos_grid(pools_t *pools, entity_handle_t handle, int32_t x, int32_t y) {

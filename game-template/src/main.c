@@ -32,6 +32,15 @@
 #include "cooldown.h"
 #include "entity.h"
 #include "cache.h"
+#include "en/hero.h"
+#include "level.h"
+
+#define CUTE_TILED_IMPLEMENTATION
+#include "cute_tiled.h"
+
+#define STB_DS_IMPLEMENTATION
+#include "stb_ds.h"
+
 
 //#define GAMELOOP 1
 #define START_SPRITES 1
@@ -84,11 +93,20 @@ uint32_t number_of_sprites = START_SPRITES;
 
 game_t game;
 
+ECS_COMPONENT_DECLARE(health_t);
+ECS_COMPONENT_DECLARE(collider_t);
+ECS_COMPONENT_DECLARE(physics_t);
+ECS_COMPONENT_DECLARE(graphics_t);
+ECS_COMPONENT_DECLARE(profile_t);
+ECS_COMPONENT_DECLARE(node_t);
+ECS_COMPONENT_DECLARE(level_t);
+
 void create_entity() {
-  entity_handle_t en = entity_make(&game.pools);
-  entity_load_image(&game.pools, en, "wabbit_alpha.png", 26, 37);
-  entity_set_pos_pixel(&game.pools, en, (float)rand()/RAND_MAX * bounding_box.max.x, (float)rand()/RAND_MAX * bounding_box.max.y);
-  entity_set_speed(&game.pools, en, (float)rand()/RAND_MAX * 2.0f, ((float)rand()/RAND_MAX * 2.0f) - 1.0f);
+  ecs_entity_t en = hero_new();
+  graphics_t *g = ecs_get(game.ecs, en, graphics_t);
+  entity_load_image(g, "wabbit_alpha.png", 26, 37);
+//  entity_set_pos_pixel(&game.pools, en, (float)rand()/RAND_MAX * bounding_box.max.x, (float)rand()/RAND_MAX * bounding_box.max.y);
+//  entity_set_speed(&game.pools, en, (float)rand()/RAND_MAX * 2.0f, ((float)rand()/RAND_MAX * 2.0f) - 1.0f);
 }
 
 void update_entity(entity_handle_t handle, entity_t *entity) {
@@ -201,6 +219,9 @@ void main_loop() {
   entity_system_update(&game.pools, update_entity, dt);
   entity_system_post_update(&game.pools, draw_entity);
 
+  ecs_run(game.ecs, game.systems.draw_level, dt, NULL);
+  ecs_run(game.ecs, game.systems.draw, dt, NULL);
+
   kmMat4 view_matrix;
   kmMat4Identity(&view_matrix);
   // Gets the viewport calculated by the adapter
@@ -208,7 +229,7 @@ void main_loop() {
   //binocle_sprite_draw(font_sprite, &gd, (uint64_t)font_sprite_pos.x, (uint64_t)font_sprite_pos.y, adapter.viewport);
 
 
-  char fps[256];
+  char fps[256] = {0};
   sprintf(fps, "FPS:%llu COUNT: %d PRESS SPACE TO ADD", binocle_window_get_fps(window), number_of_sprites);
   binocle_bitmapfont_draw_string(font, fps, 16, &game.gfx.gd, 20, 20, viewport, binocle_color_white(), view_matrix, 1);
 
@@ -224,6 +245,36 @@ void main_loop() {
 int main(int argc, char *argv[])
 {
   game = (game_t){0};
+  game.ecs = ecs_init();
+
+  ECS_COMPONENT_DEFINE(game.ecs, health_t);
+  ECS_COMPONENT_DEFINE(game.ecs, graphics_t);
+  ECS_COMPONENT_DEFINE(game.ecs, physics_t);
+  ECS_COMPONENT_DEFINE(game.ecs, collider_t);
+  ECS_COMPONENT_DEFINE(game.ecs, profile_t);
+  ECS_COMPONENT_DEFINE(game.ecs, node_t);
+  ECS_COMPONENT_DEFINE(game.ecs, level_t);
+
+  game.systems.draw = ecs_system(game.ecs, {
+    .entity = ecs_entity(game.ecs, {
+      .name = "draw"
+    }),
+    .query.filter.terms = {
+      {.id = ecs_id(graphics_t)}
+    },
+    .callback = draw_entities
+  });
+
+  game.systems.draw_level = ecs_system(game.ecs, {
+    .entity = ecs_entity(game.ecs, {
+      .name = "draw_level"
+    }),
+    .query.filter.terms = {
+      {.id = ecs_id(level_t)}
+    },
+    .callback = level_render
+  });
+
   binocle_app_desc_t app_desc = {0};
   app = binocle_app_new();
   binocle_app_init(&app, &app_desc);
@@ -375,6 +426,13 @@ int main(int argc, char *argv[])
   game.gfx.sprite_batch.gd = &game.gfx.gd;
 
   binocle_gd_setup_default_pipeline(&game.gfx.gd, DESIGN_WIDTH, DESIGN_HEIGHT, game.gfx.default_shader, screen_shader);
+
+  game.level = ecs_set_name(game.ecs, 0, "level");
+  ecs_set(game.ecs, game.level, level_t, {
+    0
+  });
+  level_t *level = ecs_get(game.ecs, game.level, level_t);
+  level_load_tilemap(level, "maps/map01.json");
 
   cooldown_system_init(&game.pools, 16);
 #ifdef GAMELOOP
