@@ -5,13 +5,9 @@
 #include "level.h"
 #include "cache.h"
 #include "backend/binocle_material.h"
+#include "stb_ds.h"
 
 extern struct game_t game;
-
-bool level_has_wall_collision(int32_t cx, int32_t cy) {
-  // TODO: implement
-  return cx > DESIGN_WIDTH/GRID || cy > DESIGN_HEIGHT/GRID || cx < 0 || cy < 0;
-}
 
 int level_coord_id(level_t *level, int cx, int cy) {
   return cx * cy * level->map->width;
@@ -27,6 +23,55 @@ void level_set_collision(level_t *level, int x, int y, bool v) {
   }
 }
 
+bool level_has_collision(level_t *level, int32_t cx, int32_t cy) {
+  if (!level_is_valid(level, cx, cy)) {
+    return true;
+  }
+
+  bool v = level->coll_map[level_coord_id(level, cx, cy)];
+  if (v) {
+    return true;
+  }
+  return false;
+}
+
+bool level_has_wall_collision(level_t *level, int32_t cx, int32_t cy) {
+  return level_has_collision(level, cx, cy);
+}
+
+void level_set_mark(level_t *level, int32_t cx, int32_t cy, LEVEL_MARK mark) {
+  if (level_is_valid(level, cx, cy)) {
+    level->marks_map[level_coord_id(level, cx, cy)] = mark;
+  }
+}
+
+bool level_has_mark(level_t *level, int32_t cx, int32_t cy, LEVEL_MARK mark) {
+  if (!level_is_valid(level, cx, cy)) {
+    return false;
+  }
+  return (level->marks_map[level_coord_id(level, cx, cy)] == mark);
+}
+
+int level_get_c_wid(level_t *level) {
+  return level->map->width;
+}
+
+int level_get_c_hei(level_t *level) {
+  return level->map->height;
+}
+
+int level_get_px_wid(level_t *level) {
+  return level_get_c_wid(level) * GRID;
+}
+
+int level_get_px_hei(level_t *level) {
+  return level_get_c_hei(level) * GRID;
+}
+
+spawner_t *level_get_hero_spawner(level_t *level) {
+  return &level->hero_spawners[0];
+}
+
 void level_load_tilemap(level_t *level, const char *filename) {
   char *json = NULL;
   size_t json_length = 0;
@@ -36,24 +81,55 @@ void level_load_tilemap(level_t *level, const char *filename) {
 
   level->map = cute_tiled_load_map_from_memory(json, json_length, 0);
   level->coll_map = malloc(level->map->width * level->map->height * level->map->width * sizeof(bool));
+  memset(level->coll_map, 0, level->map->width * level->map->height * level->map->width * sizeof(bool));
+  level->marks_map = malloc(level->map->width * level->map->height * level->map->width * sizeof(LEVEL_MARK));
+  memset(level->marks_map, 0, level->map->width * level->map->height * level->map->width * sizeof(LEVEL_MARK));
 
   cute_tiled_layer_t* layer = level->map->layers;;
-  while (layer && layer->data_count > 0) {
+  while (layer) {
     int* data = layer->data;
     int data_count = layer->data_count;
 
-    // Setup collisions
-    if (strcmp(layer->name.ptr, "collisions") == 0) {
-      for (int i = 0 ; i < data_count ; i++) {
-        int cy = layer->height - 1 - ((i) / layer->width);
-        int cx = (i) % layer->width;
-        if (data[i] != 0) {
-          level_set_collision(level, cx, cy, true);
+    if (layer->data_count > 0) {
+      // Setup collisions
+      if (strcmp(layer->name.ptr, "collisions") == 0) {
+        for (int i = 0 ; i < data_count ; i++) {
+          int cy = layer->height - 1 - ((i) / layer->width);
+          int cx = (i) % layer->width;
+          if (data[i] != 0) {
+            level_set_collision(level, cx, cy, true);
+          }
+        }
+      }
+
+      // Setup marks
+      for (int cy = 0 ; cy < level->map->height ; cy++) {
+        for (int cx = 0 ; cx < level->map->width ; cx++) {
+          if (!level_has_collision(level, cx, cy) && level_has_collision(level, cx, cy-1)) {
+            if (level_has_collision(level, cx+1, cy) || !level_has_collision(level, cx+1, cy-1)) {
+              level_set_mark(level, cx, cy, LEVEL_MARK_PLATFORM_END_RIGHT);
+            }
+            if (level_has_collision(level, cx-1, cy) || !level_has_collision(level, cx-1, cy-1)) {
+              level_set_mark(level, cx, cy, LEVEL_MARK_PLATFORM_END_LEFT);
+            }
+          }
         }
       }
     }
 
-    // TODO: setup marks for platform ends
+    if (strcmp(layer->name.ptr, "spawners") == 0) {
+      cute_tiled_object_t *object = layer->objects;
+      while (object) {
+        if (strcmp(object->name.ptr, "hero") == 0) {
+          spawner_t spawner = (spawner_t){
+            .cx = object->x / GRID,
+            .cy = level->map->width - (object->y / GRID),
+          };
+          arrput(level->hero_spawners, spawner);
+        }
+        object = object->next;
+      }
+    }
     layer = layer->next;
   }
 

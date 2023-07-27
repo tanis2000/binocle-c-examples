@@ -43,107 +43,87 @@ void entity_system_shutdown(pools_t *pools) {
   binocle_pool_discard(&pools->entity_pool);
 }
 
-void entity_system_pre_update(pools_t *pools, void func(entity_handle_t handle, entity_t *)) {
-  for (size_t i = 0 ; i < pools->entity_pool.size ; i++) {
-    entity_handle_t handle = {.id = pools->entities[i].slot.id};
-    entity_t *entity = &pools->entities[i];
-    if (entity->slot.state != BINOCLE_RESOURCESTATE_VALID) {
-      continue;
-    }
-    if (func != NULL) {
-      func(handle, entity);
-    }
+void entity_system_update(ecs_iter_t *it) {
+  physics_t *physics = ecs_field(it, physics_t, 1);
+  collider_t *collider = ecs_field(it, collider_t, 2);
+  ecs_query_t *q_level = it->ctx;
+
+  ecs_iter_t qit = ecs_query_iter(it->world, q_level);
+  level_t *level = NULL;
+  if (ecs_query_next(&qit)) {
+    level = ecs_field(&qit, level_t, 1);
   }
-}
 
-void entity_system_update(pools_t *pools, void func(entity_handle_t handle, entity_t *), float dt) {
-  for (size_t i = 0 ; i < pools->entity_pool.size ; i++) {
-    entity_handle_t handle = {.id = pools->entities[i].slot.id};
-    entity_t *entity = &pools->entities[i];
-    if (entity->slot.state != BINOCLE_RESOURCESTATE_VALID) {
-      continue;
-    }
-
+  for (int i = 0; i < it->count; i++) {
     // X
-    float steps = ceilf(fabsf((entity->dx + entity->bdx) * entity->time_mul));
-    float step = ((entity->dx + entity->bdx) * entity->time_mul) / steps;
+    float steps = ceilf(fabsf((physics->dx + physics->bdx) * physics->time_mul));
+    float step = ((physics->dx + physics->bdx) * physics->time_mul) / steps;
     while (steps > 0) {
-      entity->xr += step;
+      physics->xr += step;
       // Add X collision checks
-      entity_on_pre_step_x(handle);
-      while (entity->xr > 1) {
-        entity->xr -= 1;
-        entity->cx += 1;
+      entity_on_pre_step_x(it->entities[i], level, physics, collider);
+      while (physics->xr > 1) {
+        physics->xr -= 1;
+        physics->cx += 1;
       }
-      while (entity->xr < 0) {
-        entity->xr += 1;
-        entity->cx -= 1;
+      while (physics->xr < 0) {
+        physics->xr += 1;
+        physics->cx -= 1;
       }
       steps -= 1;
     }
-    entity->dx *= powf(entity->frict, entity->time_mul);
-    entity->bdx *= powf(entity->bump_frict, entity->time_mul);
-    if (fabsf(entity->dx) <= 0.0005f * entity->time_mul) {
-      entity->dx = 0;
+    physics->dx *= powf(physics->frict, physics->time_mul);
+    physics->bdx *= powf(physics->bump_frict, physics->time_mul);
+    if (fabsf(physics->dx) <= 0.0005f * physics->time_mul) {
+      physics->dx = 0;
     }
-    if (fabsf(entity->bdx) <= 0.0005f * entity->time_mul) {
-      entity->bdx = 0;
+    if (fabsf(physics->bdx) <= 0.0005f * physics->time_mul) {
+      physics->bdx = 0;
     }
 
     // Y
-    steps = ceilf(fabsf((entity->dy + entity->bdy) * entity->time_mul));
-    step = ((entity->dy + entity->bdy) * entity->time_mul) / steps;
+    steps = ceilf(fabsf((physics->dy + physics->bdy) * physics->time_mul));
+    step = ((physics->dy + physics->bdy) * physics->time_mul) / steps;
     while (steps > 0) {
-      entity->yr += step;
+      physics->yr += step;
       // Add Y collision checks
-      entity_on_pre_step_y(handle);
-      while (entity->yr > 1) {
-        entity->yr -= 1;
-        entity->cy += 1;
+      entity_on_pre_step_y(it->entities[i], level, physics, collider);
+      while (physics->yr > 1) {
+        physics->yr -= 1;
+        physics->cy += 1;
       }
-      while (entity->yr < 0) {
-        entity->yr += 1;
-        entity->cy -= 1;
+      while (physics->yr < 0) {
+        physics->yr += 1;
+        physics->cy -= 1;
       }
       steps -= 1;
     }
-    entity->dy *= powf(entity->frict, entity->time_mul);
-    entity->bdy *= powf(entity->bump_frict, entity->time_mul);
-    if (fabsf(entity->dy) <= 0.0005f * entity->time_mul) {
-      entity->dy = 0;
+    physics->dy *= powf(physics->frict, physics->time_mul);
+    physics->bdy *= powf(physics->bump_frict, physics->time_mul);
+    if (fabsf(physics->dy) <= 0.0005f * physics->time_mul) {
+      physics->dy = 0;
     }
-    if (fabsf(entity->bdy) <= 0.0005f * entity->time_mul) {
-      entity->bdy = 0;
+    if (fabsf(physics->bdy) <= 0.0005f * physics->time_mul) {
+      physics->bdy = 0;
     }
 
 //    entity_update_animation(handle, dt);
-
-    if (func != NULL) {
-      func(handle, entity);
-    }
   }
 }
 
-void entity_system_post_update(pools_t *pools, void func(entity_handle_t handle, entity_t *)) {
-  for (size_t i = 0 ; i < pools->entity_pool.size ; i++) {
-    entity_handle_t handle = {.id = pools->entities[i].slot.id};
-    entity_t *entity = &pools->entities[i];
-    if (entity->slot.state != BINOCLE_RESOURCESTATE_VALID) {
+void entity_system_post_update(ecs_iter_t *it) {
+  physics_t *physics = ecs_field(it, physics_t, 1);
+  graphics_t *graphics = ecs_field(it, graphics_t, 2);
+
+  for (int i = 0; i < it->count; i++) {
+    if (graphics->sprite == NULL) {
       continue;
     }
 
-    if (entity->sprite == NULL) {
-      continue;
-    }
-
-    entity->sprite_x = (entity->cx + entity->xr) * GRID;
-    entity->sprite_y = (entity->cy + entity->yr) * GRID;
-    entity->sprite_scale_x = entity->dir * entity->sprite_scale_set_x;
-    entity->sprite_scale_y = entity->sprite_scale_set_y;
-
-    if (func != NULL) {
-      func(handle, entity);
-    }
+    graphics->sprite_x = (physics->cx + physics->xr) * GRID;
+    graphics->sprite_y = (physics->cy + physics->yr) * GRID;
+    graphics->sprite_scale_x = physics->dir * graphics->sprite_scale_set_x;
+    graphics->sprite_scale_y = graphics->sprite_scale_set_y;
   }
 }
 
@@ -249,12 +229,12 @@ void entity_load_image(graphics_t *g, const char *filename, uint32_t width, uint
   g->sprite->origin.y = width * g->pivot_y;
 }
 
-void entity_set_pos_grid(pools_t *pools, entity_handle_t handle, int32_t x, int32_t y) {
-  entity_t *entity = entity_at(pools, handle.id);
-  entity->cx = floor(x);
-  entity->cy = floor(y);
-  entity->xr = 0.5f;
-  entity->yr = 0;
+void entity_set_pos_grid(ecs_entity_t en, int32_t x, int32_t y) {
+  physics_t *p = ecs_get(game.ecs, en, physics_t);
+  p->cx = floor(x);
+  p->cy = floor(y);
+  p->xr = 0.5f;
+  p->yr = 0;
 }
 
 void entity_set_pos_pixel(pools_t *pools, entity_handle_t handle, int32_t x, int32_t y) {
@@ -292,41 +272,39 @@ bool entity_on_ground(entity_handle_t handle) {
   return false;
 }
 
-void entity_on_touch_wall(entity_handle_t handle, int32_t direction) {
+void entity_on_touch_wall(ecs_entity_t en, int32_t direction) {
 }
 
-void entity_on_land(entity_handle_t handle) {
+void entity_on_land(ecs_entity_t en) {
 }
 
-void entity_on_pre_step_x(entity_handle_t handle) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
+void entity_on_pre_step_x(ecs_entity_t en, level_t *level, physics_t *physics, collider_t *collider) {
   // Right collisions
-  if (entity->has_collisions && entity->xr > 0.8f && level_has_wall_collision(entity->cx+1, entity->cy)) {
-    entity_on_touch_wall(handle, 1);
-    entity->xr = 0.8f;
+  if (collider->has_collisions && physics->xr > 0.8f && level_has_wall_collision(level, physics->cx+1, physics->cy)) {
+    entity_on_touch_wall(en, 1);
+    physics->xr = 0.8f;
   }
 
   // Left collisions
-  if (entity->has_collisions && entity->xr < 0.2f && level_has_wall_collision(entity->cx-1, entity->cy)) {
-    entity_on_touch_wall(handle, -1);
-    entity->xr = 0.2f;
+  if (collider->has_collisions && physics->xr < 0.2f && level_has_wall_collision(level, physics->cx-1, physics->cy)) {
+    entity_on_touch_wall(en, -1);
+    physics->xr = 0.2f;
   }
 }
 
-void entity_on_pre_step_y(entity_handle_t handle) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
+void entity_on_pre_step_y(ecs_entity_t en, level_t *level, physics_t *physics, collider_t *collider) {
   // Down collisions
-  if (entity->has_collisions && entity->yr < 0.0f && level_has_wall_collision(entity->cx, entity->cy-1)) {
-    entity->dy = 0;
-    entity->yr = 0;
-    entity->bdx *= 0.5f;
-    entity->bdx = 0;
-    entity_on_land(handle);
+  if (collider->has_collisions && physics->yr < 0.0f && level_has_wall_collision(level, physics->cx, physics->cy-1)) {
+    physics->dy = 0;
+    physics->yr = 0;
+    physics->bdx *= 0.5f;
+    physics->bdx = 0;
+    entity_on_land(en);
   }
 
   // Up collisions
-  if (entity->has_collisions && entity->yr > 0.5f && level_has_wall_collision(entity->cx, entity->cy+1)) {
-    entity->yr = 0.5f;
+  if (collider->has_collisions && physics->yr > 0.5f && level_has_wall_collision(level, physics->cx, physics->cy+1)) {
+    physics->yr = 0.5f;
   }
 }
 
@@ -388,16 +366,5 @@ void entity_draw_debug(entity_handle_t handle) {
     center.y = entity_get_center_y(handle);
     kmAABB2Initialize(&rect, &center, entity->wid, entity->hei, 0);
     binocle_gd_draw_rect(&game.gfx.gd, rect, binocle_color_green_translucent(), viewport, &game.gfx.camera, NULL, LAYER_TEXT + 1);
-  }
-}
-
-void entity_draw(entity_handle_t handle) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
-  if (entity->visible && entity->sprite != NULL) {
-    kmVec2 scale;
-    scale.x = entity->sprite_scale_x;
-    scale.y = entity->sprite_scale_y;
-    kmAABB2 viewport = binocle_camera_get_viewport(game.gfx.camera);
-    binocle_sprite_draw_with_sprite_batch(&game.gfx.sprite_batch, entity->sprite, &game.gfx.gd, entity->sprite_x, entity->sprite_y, &viewport, 0, &scale, &game.gfx.camera, entity->depth);
   }
 }

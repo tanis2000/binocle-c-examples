@@ -105,6 +105,7 @@ void create_entity() {
   ecs_entity_t en = hero_new();
   graphics_t *g = ecs_get(game.ecs, en, graphics_t);
   entity_load_image(g, "wabbit_alpha.png", 26, 37);
+  game.hero = en;
 //  entity_set_pos_pixel(&game.pools, en, (float)rand()/RAND_MAX * bounding_box.max.x, (float)rand()/RAND_MAX * bounding_box.max.y);
 //  entity_set_speed(&game.pools, en, (float)rand()/RAND_MAX * 2.0f, ((float)rand()/RAND_MAX * 2.0f) - 1.0f);
 }
@@ -159,16 +160,6 @@ void update_entity(entity_handle_t handle, entity_t *entity) {
 */
 }
 
-void draw_entity(entity_handle_t handle, entity_t *entity) {
-  entity_draw(handle);
-//  sg_color white = binocle_color_white();
-//  kmVec2 pos = (kmVec2) {
-//    .x = (entity->cx + entity->xr) * GRID,
-//    .y = (entity->cy + entity->yr) * GRID,
-//  };
-//  binocle_sprite_batch_draw(&sprite_batch, &entity->sprite->material->albedo_texture, &pos, NULL, NULL, NULL, 0.0f, NULL, binocle_color_white(), 0.0f);
-}
-
 void main_loop() {
   binocle_window_begin_frame(window);
   float dt = (float)binocle_window_get_frame_time(window) / 1000.0f;
@@ -215,10 +206,9 @@ void main_loop() {
   kmVec2 scale;
   scale.x = 1.0f;
   scale.y = 1.0f;
-  entity_system_pre_update(&game.pools, NULL);
-  entity_system_update(&game.pools, update_entity, dt);
-  entity_system_post_update(&game.pools, draw_entity);
 
+  ecs_run(game.ecs, game.systems.update_entities, dt, NULL);
+  ecs_run(game.ecs, game.systems.post_update_entities, dt, NULL);
   ecs_run(game.ecs, game.systems.draw_level, dt, NULL);
   ecs_run(game.ecs, game.systems.draw, dt, NULL);
 
@@ -273,6 +263,35 @@ int main(int argc, char *argv[])
       {.id = ecs_id(level_t)}
     },
     .callback = level_render
+  });
+
+  ecs_query_t  *q_level = ecs_query(game.ecs, {
+    .filter.terms = {
+      { ecs_id(level_t), .inout = EcsIn },
+    }
+  });
+
+  game.systems.update_entities = ecs_system(game.ecs, {
+    .entity = ecs_entity(game.ecs, {
+      .name = "update_entities"
+    }),
+    .query.filter.terms = {
+      {.id = ecs_id(physics_t)},
+      {.id = ecs_id(collider_t)},
+    },
+    .ctx = q_level,
+    .callback = entity_system_update
+  });
+
+  game.systems.post_update_entities = ecs_system(game.ecs, {
+    .entity = ecs_entity(game.ecs, {
+      .name = "post_update_entities"
+    }),
+    .query.filter.terms = {
+      {.id = ecs_id(physics_t)},
+      {.id = ecs_id(graphics_t)},
+    },
+    .callback = entity_system_post_update
   });
 
   binocle_app_desc_t app_desc = {0};
@@ -403,10 +422,6 @@ int main(int argc, char *argv[])
   cache_system_init();
   entity_system_init(&game.pools, number_of_sprites);
 
-  for (int i = 0 ; i < number_of_sprites ; i++) {
-    create_entity();
-  }
-
   char font_filename[1024];
   sprintf(font_filename, "%s%s", binocle_data_dir, "font.fnt");
   font = binocle_bitmapfont_from_file(font_filename, true);
@@ -435,6 +450,12 @@ int main(int argc, char *argv[])
   level_load_tilemap(level, "maps/map01.json");
 
   cooldown_system_init(&game.pools, 16);
+
+  spawner_t *hs = level_get_hero_spawner(level);
+  create_entity();
+  entity_set_pos_grid(game.hero, hs->cx, hs->cy);
+
+
 #ifdef GAMELOOP
   binocle_game_run(window, input);
 #else

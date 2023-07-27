@@ -126,6 +126,8 @@ typedef struct game_t {
   ecs_world_t *ecs;
   /// The level entity
   ecs_entity_t level;
+  /// The hero entity
+  ecs_entity_t hero;
   struct {
     binocle_gd gd;
     binocle_camera camera;
@@ -134,6 +136,8 @@ typedef struct game_t {
     sg_shader default_shader;
   } gfx;
   struct {
+    ecs_entity_t update_entities;
+    ecs_entity_t post_update_entities;
     ecs_entity_t draw;
     ecs_entity_t draw_level;
   } systems;
@@ -218,6 +222,17 @@ typedef struct tile_t {
   binocle_sprite *sprite;
 } tile_t;
 
+typedef enum LEVEL_MARK {
+  LEVEL_MARK_NONE = 0,
+  LEVEL_MARK_PLATFORM_END_LEFT = 1,
+  LEVEL_MARK_PLATFORM_END_RIGHT = 2,
+} LEVEL_MARK;
+
+typedef struct spawner_t {
+  int32_t cx;
+  int32_t cy;
+} spawner_t;
+
 typedef struct level_t {
   cute_tiled_map_t *map;
   /// Collision map array
@@ -225,7 +240,12 @@ typedef struct level_t {
   binocle_sprite *sprite;
   /// Tiles array
   tile_t *tiles;
+  /// Marks map array
+  LEVEL_MARK *marks_map;
+  /// Array of spawners
+  spawner_t *hero_spawners;
 } level_t;
+
 
 extern ECS_COMPONENT_DECLARE(health_t);
 extern ECS_COMPONENT_DECLARE(collider_t);
