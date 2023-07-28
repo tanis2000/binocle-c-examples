@@ -24,42 +24,42 @@ float l_point_get_level_y(l_point_t *p) {
   return (p->cy + p->yr) * GRID;
 }
 
-void l_point_set_level_pixel_x(l_point_t *p, int32_t x) {
-  p->cx = x / GRID;
-  p->xr = (x % GRID) / GRID;
+void l_point_set_level_pixel_x(l_point_t *p, float x) {
+  p->cx = floorf(x / GRID);
+  p->xr = (float)((int32_t)x % GRID) / GRID;
 }
 
-void l_point_set_level_pixel_y(l_point_t *p, int32_t y) {
-  p->cy = y / GRID;
-  p->yr = (y % GRID) / GRID;
+void l_point_set_level_pixel_y(l_point_t *p, float y) {
+  p->cy = floorf(y / GRID);
+  p->yr = (float)((int32_t)y % GRID) / GRID;
 }
 
-void l_point_set_level_pixel_x_y(l_point_t *p, int32_t x, int32_t y) {
+void l_point_set_level_pixel_x_y(l_point_t *p, float x, float y) {
   l_point_set_level_pixel_x(p, x);
   l_point_set_level_pixel_y(p, y);
 }
 
-void l_point_set_level_x(l_point_t *p, int32_t x) {
+void l_point_set_level_x(l_point_t *p, float x) {
   l_point_set_level_pixel_x(p, x);
 }
 
-void l_point_set_level_y(l_point_t *p, int32_t x) {
+void l_point_set_level_y(l_point_t *p, float x) {
   l_point_set_level_pixel_y(p, x);
 }
 
 int32_t l_point_get_level_xi(l_point_t *p) {
-  return l_point_get_level_x(p);
+  return (int32_t)floorf(l_point_get_level_x(p));
 }
 
 int32_t l_point_get_level_yi(l_point_t *p) {
-  return l_point_get_level_y(p);
+  return (int32_t)floorf(l_point_get_level_y(p));
 }
 
-int32_t l_point_get_screen_x(l_point_t *p) {
+float l_point_get_screen_x(l_point_t *p) {
   return l_point_get_level_x(p) * SCALE;
 }
 
-int32_t l_point_get_screen_y(l_point_t *p) {
+float l_point_get_screen_y(l_point_t *p) {
   return l_point_get_level_y(p) * SCALE;
 }
 

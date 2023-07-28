@@ -7,8 +7,6 @@
 
 #include "types.h"
 
-void entity_system_init(pools_t *pools, size_t pool_size);
-void entity_system_shutdown(pools_t *pools);
 void entity_system_update(ecs_iter_t *it);
 void entity_system_post_update(ecs_iter_t *it);
 
@@ -23,6 +21,11 @@ void entity_on_pre_step_x(ecs_entity_t en, level_t *level, physics_t *physics, c
 void entity_on_pre_step_y(ecs_entity_t en, level_t *level, physics_t *physics, collider_t *collider);
 float entity_get_center_x(ecs_entity_t en);
 float entity_get_center_y(ecs_entity_t en);
+bool entity_is_alive(health_t *health);
+bool entity_on_ground(ecs_entity_t en);
+void entity_add_animation(graphics_t *graphics, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop);
+void entity_play_animation(graphics_t *graphics, ANIMATION_ID id, bool force);
+void entity_update_animation(graphics_t *graphics, float dt);
 
 void draw_entities(ecs_iter_t *it);
 #endif //GAME_TEMPLATE_ENTITY_H

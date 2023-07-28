@@ -13,6 +13,7 @@
 #include "binocle_gd.h"
 #include "flecs.h"
 #include "cute_tiled.h"
+#include "binocle_input.h"
 
 // TODO: particles
 // TODO: entities
@@ -123,6 +124,7 @@ typedef struct game_t {
   float dt;
   cache_t cache;
   bool debug_enabled;
+  binocle_input input;
   ecs_world_t *ecs;
   /// The level entity
   ecs_entity_t level;
@@ -144,6 +146,7 @@ typedef struct game_t {
     ecs_entity_t post_update_game_camera;
     ecs_entity_t draw;
     ecs_entity_t draw_level;
+    ecs_entity_t hero_input_update;
   } systems;
 } game_t;
 
@@ -169,9 +172,21 @@ typedef struct health_t {
   bool destroyed;
 } health_t;
 
+typedef struct animation_frame_t {
+  int *frames;
+  int frames_count;
+  float period;
+  bool loop;
+} animation_frame_t;
+
 typedef struct graphics_t {
   binocle_sprite *sprite;
   binocle_subtexture *frames;
+  animation_frame_t *animations;
+  animation_frame_t *animation;
+  float animation_timer;
+  int animation_frame;
+  int frame;
 
   int32_t sprite_x;
   int32_t sprite_y;
@@ -278,6 +293,10 @@ typedef struct game_camera_t {
   float shake_power;
 } game_camera_t;
 
+typedef enum ANIMATION_ID {
+  ANIMATION_ID_HERO_IDLE1 = 0,
+} ANIMATION_ID;
+
 extern ECS_COMPONENT_DECLARE(health_t);
 extern ECS_COMPONENT_DECLARE(collider_t);
 extern ECS_COMPONENT_DECLARE(physics_t);
@@ -286,5 +305,7 @@ extern ECS_COMPONENT_DECLARE(profile_t);
 extern ECS_COMPONENT_DECLARE(node_t);
 extern ECS_COMPONENT_DECLARE(level_t);
 extern ECS_COMPONENT_DECLARE(game_camera_t);
+
+extern ECS_TAG_DECLARE(player_t);
 
 #endif //GAME_TEMPLATE_TYPES_H

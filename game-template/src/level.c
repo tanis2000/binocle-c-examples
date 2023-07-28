@@ -10,7 +10,7 @@
 extern struct game_t game;
 
 int level_coord_id(level_t *level, int cx, int cy) {
-  return cx * cy * level->map->width;
+  return cx + cy * level->map->width;
 }
 
 bool level_is_valid(level_t *level, int cx, int cy) {
@@ -80,10 +80,10 @@ void level_load_tilemap(level_t *level, const char *filename) {
   }
 
   level->map = cute_tiled_load_map_from_memory(json, json_length, 0);
-  level->coll_map = malloc(level->map->width * level->map->height * level->map->width * sizeof(bool));
-  memset(level->coll_map, 0, level->map->width * level->map->height * level->map->width * sizeof(bool));
-  level->marks_map = malloc(level->map->width * level->map->height * level->map->width * sizeof(LEVEL_MARK));
-  memset(level->marks_map, 0, level->map->width * level->map->height * level->map->width * sizeof(LEVEL_MARK));
+  level->coll_map = malloc(level->map->width * level->map->height * sizeof(bool));
+  memset(level->coll_map, 0, level->map->width * level->map->height * sizeof(bool));
+  level->marks_map = malloc(level->map->width * level->map->height * sizeof(LEVEL_MARK));
+  memset(level->marks_map, 0, level->map->width * level->map->height * sizeof(LEVEL_MARK));
 
   cute_tiled_layer_t* layer = level->map->layers;;
   while (layer) {
@@ -94,10 +94,12 @@ void level_load_tilemap(level_t *level, const char *filename) {
       // Setup collisions
       if (strcmp(layer->name.ptr, "collisions") == 0) {
         for (int i = 0 ; i < data_count ; i++) {
-          int cy = layer->height - 1 - ((i) / layer->width);
-          int cx = (i) % layer->width;
+          int cy = layer->height - 1 - (i / layer->width);
+          int cx = i % layer->width;
           if (data[i] != 0) {
             level_set_collision(level, cx, cy, true);
+          } else {
+            level_set_collision(level, cx, cy, false);
           }
         }
       }

@@ -34,36 +34,36 @@ game_camera_t game_camera_new() {
   return res;
 }
 
-int32_t game_camera_get_px_wid(game_camera_t *gc) {
-  return DESIGN_WIDTH / gc->zoom;
+float game_camera_get_px_wid(game_camera_t *gc) {
+  return ceilf(DESIGN_WIDTH / gc->zoom);
 }
 
-int32_t game_camera_get_px_hei(game_camera_t *gc) {
-  return DESIGN_HEIGHT / gc->zoom;
+float game_camera_get_px_hei(game_camera_t *gc) {
+  return ceilf(DESIGN_HEIGHT / gc->zoom);
 }
 
-int32_t game_camera_get_left(game_camera_t *gc) {
-  return l_point_get_level_x(&gc->clamped_focus) - game_camera_get_px_wid(gc) * 0.5f;
+float game_camera_get_left(game_camera_t *gc) {
+  return floorf(l_point_get_level_x(&gc->clamped_focus) - game_camera_get_px_wid(gc) * 0.5f);
 }
 
-int32_t game_camera_get_right(game_camera_t *gc) {
-  return l_point_get_level_x(&gc->clamped_focus) + game_camera_get_px_wid(gc) * 0.5f;
+float game_camera_get_right(game_camera_t *gc) {
+  return floorf(l_point_get_level_x(&gc->clamped_focus) + game_camera_get_px_wid(gc) * 0.5f);
 }
 
-int32_t game_camera_get_top(game_camera_t *gc) {
-  return l_point_get_level_y(&gc->clamped_focus) + game_camera_get_px_hei(gc) * 0.5f;
+float game_camera_get_top(game_camera_t *gc) {
+  return floorf(l_point_get_level_y(&gc->clamped_focus) + game_camera_get_px_hei(gc) * 0.5f);
 }
 
-int32_t game_camera_get_bottom(game_camera_t *gc) {
-  return l_point_get_level_y(&gc->clamped_focus) - game_camera_get_px_hei(gc) * 0.5f;
+float game_camera_get_bottom(game_camera_t *gc) {
+  return floorf(l_point_get_level_y(&gc->clamped_focus) - game_camera_get_px_hei(gc) * 0.5f);
 }
 
-int32_t game_camera_get_center_x(game_camera_t *gc) {
-  return (game_camera_get_left(gc) + game_camera_get_right(gc)) * 0.5f;
+float game_camera_get_center_x(game_camera_t *gc) {
+  return floorf((game_camera_get_left(gc) + game_camera_get_right(gc)) * 0.5f);
 }
 
-int32_t game_camera_get_center_y(game_camera_t *gc) {
-  return (game_camera_get_bottom(gc) + game_camera_get_top(gc)) * 0.5f;
+float game_camera_get_center_y(game_camera_t *gc) {
+  return floorf((game_camera_get_bottom(gc) + game_camera_get_top(gc)) * 0.5f);
 }
 
 void game_camera_set_zoom(game_camera_t *gc, float zoom) {
@@ -107,8 +107,8 @@ void game_camera_track_entity(game_camera_t *gc, ecs_entity_t e, bool immediate,
 }
 
 void game_camera_apply(game_camera_t *gc) {
-  int32_t cam_x = l_point_get_level_x(&gc->clamped_focus) - game_camera_get_px_wid(gc) * 0.5f;
-  int32_t cam_y = l_point_get_level_y(&gc->clamped_focus) - game_camera_get_px_hei(gc) * 0.5f;
+  float cam_x = floorf(l_point_get_level_x(&gc->clamped_focus) - (float)game_camera_get_px_wid(gc) * 0.5f);
+  float cam_y = floorf(l_point_get_level_y(&gc->clamped_focus) - (float)game_camera_get_px_hei(gc) * 0.5f);
 
 //  if (game_camera_has_cooldown(gc, "shaking")) {
 //    cam_x += cosf(gc->elapsed_time * 1.1f) * 2.5f * gc->shake_power * game_camera_get_cooldown_ratio(gc, "shaking");
@@ -118,40 +118,25 @@ void game_camera_apply(game_camera_t *gc) {
   binocle_camera_set_position(&game.gfx.camera, cam_x, cam_y);
 }
 
-/*
- function GameCamera:apply()
-    local cam_x = math.floor(self.clamped_focus:get_level_x() - self:get_px_wid() * 0.5)
-    local cam_y = math.floor(self.clamped_focus:get_level_y() - self:get_px_hei() * 0.5)
-
-    if self.cd:has("shaking") then
-        cam_x = cam_x + math.cos(self.elapsed_time*1.1)*2.5*self.shake_power * self.cd:get_ratio("shaking")
-        cam_y = cam_y + math.sin(0.3+self.elapsed_time*1.7)*2.5*self.shake_power * self.cd:get_ratio("shaking")
-    end
-
-    camera.set_position(cam, cam_x, cam_y)
-end
-
- */
 void update_game_camera(ecs_iter_t *it) {
   game_camera_t *gcs = ecs_field(it, game_camera_t, 1);
-  level_t *level = ecs_get(game.ecs, game.level, level_t);
+  const level_t *level = ecs_get(game.ecs, game.level, level_t);
   for (int i = 0 ; i < it->count; i++) {
     game_camera_t *gc = &gcs[i];
     // target tracking
     if (gc->target != 0) {
-      ecs_get(game.ecs, gc->target, physics_t);
       float spd_x = 0.015f * gc->tracking_speed * gc->zoom;
       float spd_y = 0.023f * gc->tracking_speed * gc->zoom;
       float tx = entity_get_center_x(gc->target) + gc->target_off_x;
       float ty = entity_get_center_y(gc->target) + gc->target_off_y;
       float a = l_point_ang_to(&gc->raw_focus, NULL, NULL, tx, ty);
       float dist_x = fabsf(tx - l_point_get_level_x(&gc->raw_focus));
-      if (dist_x >= gc->dead_zone_pct_x * game_camera_get_px_wid(gc)) {
-        gc->dx += cosf(a) * (0.8f * dist_x - gc->dead_zone_pct_x * game_camera_get_px_wid(gc)) * spd_x;
+      if (dist_x >= gc->dead_zone_pct_x * (float)game_camera_get_px_wid(gc)) {
+        gc->dx += cosf(a) * (0.8f * dist_x - gc->dead_zone_pct_x * (float)game_camera_get_px_wid(gc)) * spd_x;
       }
       float dist_y = fabsf(ty - l_point_get_level_y(&gc->raw_focus));
-      if (dist_y >= gc->dead_zone_pct_y * game_camera_get_px_hei(gc)) {
-        gc->dy += sinf(a) * (0.8f * dist_y - gc->dead_zone_pct_y * game_camera_get_px_hei(gc)) * spd_y;
+      if (dist_y >= gc->dead_zone_pct_y * (float)game_camera_get_px_hei(gc)) {
+        gc->dy += sinf(a) * (0.8f * dist_y - gc->dead_zone_pct_y * (float)game_camera_get_px_hei(gc)) * spd_y;
       }
     }
 
@@ -159,21 +144,21 @@ void update_game_camera(ecs_iter_t *it) {
     float frict_x = gc->base_frict - gc->tracking_speed * gc->zoom * 0.027f * gc->base_frict;
     float frict_y = frict_x;
     if (gc->clamp_to_level_bounds) {
-      float brake_dist = gc->brake_dist_near_bounds * game_camera_get_px_wid(gc);
+      float brake_dist = gc->brake_dist_near_bounds * (float)game_camera_get_px_wid(gc);
       if (gc->dx <= 0) {
-        float brake_ratio = 1.0f - kmClamp((l_point_get_level_x(&gc->raw_focus) - game_camera_get_px_wid(gc) * 0.5f) / brake_dist, 0, 1);
+        float brake_ratio = 1.0f - kmClamp((l_point_get_level_x(&gc->raw_focus) - (float)game_camera_get_px_wid(gc) * 0.5f) / brake_dist, 0, 1);
         frict_x = frict_x * 1 - 0.9f * brake_ratio;
       } else if (gc->dx > 0) {
-        float brake_ratio = 1.0f - kmClamp(((level_get_px_wid(level) - game_camera_get_px_wid(gc) * 0.5f) - l_point_get_level_x(&gc->raw_focus)) / brake_dist, 0, 1);
+        float brake_ratio = 1.0f - kmClamp((((float)level_get_px_wid(level) - (float)game_camera_get_px_wid(gc) * 0.5f) - l_point_get_level_x(&gc->raw_focus)) / brake_dist, 0, 1);
         frict_x = frict_x * 1 - 0.9f * brake_ratio;
       }
 
-      brake_dist = gc->brake_dist_near_bounds * game_camera_get_px_hei(gc);
+      brake_dist = gc->brake_dist_near_bounds * (float)game_camera_get_px_hei(gc);
       if (gc->dy > 0) {
-        float brake_ratio = 1.0f - kmClamp((l_point_get_level_y(&gc->raw_focus) - game_camera_get_px_hei(gc) * 0.5f) / brake_dist, 0, 1);
+        float brake_ratio = 1.0f - kmClamp((l_point_get_level_y(&gc->raw_focus) - (float)game_camera_get_px_hei(gc) * 0.5f) / brake_dist, 0, 1);
         frict_y = frict_y * 1 - 0.9f * brake_ratio;
       } else if (gc->dy < 0) {
-        float brake_ratio = 1.0f - kmClamp(((level_get_px_hei(level) - game_camera_get_px_hei(gc) * 0.5f) - l_point_get_level_y(&gc->raw_focus)) / brake_dist, 0, 1);
+        float brake_ratio = 1.0f - kmClamp((((float)level_get_px_hei(level) - (float)game_camera_get_px_hei(gc) * 0.5f) - l_point_get_level_y(&gc->raw_focus)) / brake_dist, 0, 1);
         frict_y = frict_y * 1 - 0.9f * brake_ratio;
       }
     }
@@ -190,15 +175,15 @@ void update_game_camera(ecs_iter_t *it) {
     }
     if (gc->clamp_to_level_bounds) {
       if (level_get_px_wid(level) < game_camera_get_px_wid(gc)) {
-        l_point_set_level_x(&gc->clamped_focus, level_get_px_wid(level) * 0.5f); // centered small level
+        l_point_set_level_x(&gc->clamped_focus, (float)level_get_px_wid(level) * 0.5f); // centered small level
       } else {
-        l_point_set_level_x(&gc->clamped_focus, kmClamp(l_point_get_level_x(&gc->raw_focus), game_camera_get_px_wid(gc) * 0.5f, level_get_px_wid(level) - game_camera_get_px_wid(gc) * 0.5f));
+        l_point_set_level_x(&gc->clamped_focus, kmClamp(l_point_get_level_x(&gc->raw_focus), (float)game_camera_get_px_wid(gc) * 0.5f, (float)level_get_px_wid(level) - (float)game_camera_get_px_wid(gc) * 0.5f));
       }
 
       if (level_get_px_hei(level) < game_camera_get_px_hei(gc)) {
         l_point_set_level_y(&gc->clamped_focus, level_get_px_hei(level) * 0.5f); // centered small level
       } else {
-        l_point_set_level_y(&gc->clamped_focus, kmClamp(l_point_get_level_y(&gc->raw_focus), game_camera_get_px_hei(gc) * 0.5f, level_get_px_hei(level) - game_camera_get_px_hei(gc) * 0.5f));
+        l_point_set_level_y(&gc->clamped_focus, kmClamp(l_point_get_level_y(&gc->raw_focus), (float)game_camera_get_px_hei(gc) * 0.5f, (float)level_get_px_hei(level) - (float)game_camera_get_px_hei(gc) * 0.5f));
       }
     } else {
       l_point_set_level_x(&gc->clamped_focus, l_point_get_level_x(&gc->raw_focus));

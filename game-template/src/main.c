@@ -78,7 +78,6 @@ typedef struct screen_shader_vs_params_t {
 binocle_app app;
 char *binocle_data_dir = NULL;
 binocle_window *window;
-binocle_input input;
 binocle_viewport_adapter *adapter;
 binocle_bitmapfont *font;
 sg_image font_image;
@@ -86,11 +85,6 @@ binocle_material *font_material;
 binocle_sprite *font_sprite;
 kmVec2 font_sprite_pos;
 sg_shader screen_shader;
-sg_image image;
-binocle_material *material;
-float gravity;
-kmAABB2 bounding_box;
-uint32_t number_of_sprites = START_SPRITES;
 
 game_t game;
 
@@ -103,10 +97,12 @@ ECS_COMPONENT_DECLARE(node_t);
 ECS_COMPONENT_DECLARE(level_t);
 ECS_COMPONENT_DECLARE(game_camera_t);
 
+ECS_TAG_DECLARE(player_t);
+
 void create_entity() {
   ecs_entity_t en = hero_new();
-  graphics_t *g = ecs_get(game.ecs, en, graphics_t);
-  entity_load_image(g, "wabbit_alpha.png", 26, 37);
+//  graphics_t *g = ecs_get_mut(game.ecs, en, graphics_t);
+//  entity_load_image(g, "wabbit_alpha.png", 26, 37);
   game.hero = en;
 //  entity_set_pos_pixel(&game.pools, en, (float)rand()/RAND_MAX * bounding_box.max.x, (float)rand()/RAND_MAX * bounding_box.max.y);
 //  entity_set_speed(&game.pools, en, (float)rand()/RAND_MAX * 2.0f, ((float)rand()/RAND_MAX * 2.0f) - 1.0f);
@@ -122,79 +118,20 @@ void create_game_camera() {
   game_camera_center_on_target(original_game_camera);
 }
 
-void update_entity(entity_handle_t handle, entity_t *entity) {
-  float dt = game.dt;
-  entity->dx += entity->speed_x * dt * entity->time_mul;
-  entity->dy += entity->speed_y * dt * entity->time_mul;
-  if (entity->sprite_x > bounding_box.max.x) {
-    entity->speed_x = -fabsf(entity->speed_x);
-  } else if (entity->sprite_x < bounding_box.min.x) {
-    entity->speed_x = fabsf(entity->speed_x);
-  }
-  if (entity->sprite_y < bounding_box.min.y) {
-    entity->speed_y = -fabsf(entity->speed_y);
-  } else if (entity->sprite_y > bounding_box.max.y) {
-    entity->speed_y = fabsf(entity->speed_y);
-  }
-  /*
-  entity_set_pos_pixel(&game.pools, handle,
-                       entity->sprite_x + entity->speed_x * dt,
-                       entity->sprite_y + entity->speed_y * dt);
-  entity_set_speed(&game.pools, handle, entity->speed_x, entity->speed_y + gravity);
-
-  if (entity->sprite_x > bounding_box.max.x) {
-    entity_set_speed(&game.pools, handle, entity->speed_x * -1.0f, entity->speed_y);
-    entity_set_pos_pixel(&game.pools, handle,
-                         bounding_box.max.x,
-                         entity->sprite_y );
-  } else if (entity->sprite_x < bounding_box.min.x) {
-    entity_set_speed(&game.pools, handle, entity->speed_x * -1.0f, entity->speed_y);
-    entity_set_pos_pixel(&game.pools, handle,
-                         bounding_box.min.x,
-                         entity->sprite_y );
-  }
-
-  if (entity->sprite_y < bounding_box.min.y) {
-    entity_set_speed(&game.pools, handle, entity->speed_x, entity->speed_y * -0.8f);
-    entity_set_pos_pixel(&game.pools, handle,
-                         entity->sprite_x,
-                         bounding_box.min.y );
-
-    if ((float)rand()/RAND_MAX > 0.5f) {
-      entity_set_speed(&game.pools, handle, entity->speed_x, entity->speed_y - 3.0f + (float)rand()/RAND_MAX * 4.0f);
-    }
-  } else if (entity->sprite_y > bounding_box.max.y) {
-    entity_set_speed(&game.pools, handle, entity->speed_x, 0.0f);
-    entity_set_pos_pixel(&game.pools, handle,
-                         entity->sprite_x,
-                         bounding_box.max.y );
-  }
-*/
-}
-
 void main_loop() {
   binocle_window_begin_frame(window);
   float dt = (float)binocle_window_get_frame_time(window) / 1000.0f;
   game.dt = dt;
 
-  binocle_input_update(&input);
+  binocle_input_update(&game.input);
 
-  if (input.resized) {
+  if (game.input.resized) {
     kmVec2 oldWindowSize = {.x = window->width, .y = window->height};
-    window->width = input.newWindowSize.x;
-    window->height = input.newWindowSize.y;
-    binocle_viewport_adapter_reset(adapter, oldWindowSize, input.newWindowSize);
-    input.resized = false;
+    window->width = game.input.newWindowSize.x;
+    window->height = game.input.newWindowSize.y;
+    binocle_viewport_adapter_reset(adapter, oldWindowSize, game.input.newWindowSize);
+    game.input.resized = false;
   }
-
-//  if (binocle_input_is_key_pressed(&input, KEY_SPACE)) {
-//    uint32_t old_number_of_sprites = number_of_sprites;
-//    number_of_sprites += 256;
-//    binocle_array_grow(entities, number_of_sprites);
-//    for (int i = old_number_of_sprites ; i < number_of_sprites ; i++) {
-//      create_entity(&entities[i]);
-//    }
-//  }
 
   cooldown_system_update(&game.pools, dt);
 
@@ -218,6 +155,7 @@ void main_loop() {
   scale.y = 1.0f;
 
   ecs_run(game.ecs, game.systems.update_entities, dt, NULL);
+  ecs_run(game.ecs, game.systems.hero_input_update, dt, NULL);
   ecs_run(game.ecs, game.systems.post_update_entities, dt, NULL);
   ecs_run(game.ecs, game.systems.update_game_camera, dt, NULL);
   ecs_run(game.ecs, game.systems.draw_level, dt, NULL);
@@ -232,7 +170,7 @@ void main_loop() {
 
 
   char fps[256] = {0};
-  sprintf(fps, "FPS:%llu COUNT: %d PRESS SPACE TO ADD", binocle_window_get_fps(window), number_of_sprites);
+  sprintf(fps, "FPS:%llu", binocle_window_get_fps(window));
   binocle_bitmapfont_draw_string(font, fps, 16, &game.gfx.gd, 20, 20, viewport, binocle_color_white(), view_matrix, 1);
 
   binocle_sprite_batch_end(&game.gfx.sprite_batch, viewport);
@@ -257,6 +195,8 @@ int main(int argc, char *argv[])
   ECS_COMPONENT_DEFINE(game.ecs, node_t);
   ECS_COMPONENT_DEFINE(game.ecs, level_t);
   ECS_COMPONENT_DEFINE(game.ecs, game_camera_t);
+
+  ECS_TAG_DEFINE(game.ecs, player_t);
 
   game.systems.draw = ecs_system(game.ecs, {
     .entity = ecs_entity(game.ecs, {
@@ -327,6 +267,18 @@ int main(int argc, char *argv[])
     .callback = post_update_game_camera
   });
 
+  game.systems.hero_input_update = ecs_system(game.ecs, {
+    .entity = ecs_entity(game.ecs, {
+      .name = "hero_input_update"
+    }),
+    .query.filter.terms = {
+      {.id = ecs_id(physics_t)},
+      {.id = ecs_id(health_t)},
+      {.id = ecs_id(player_t)},
+    },
+    .callback = hero_input_update
+  });
+
   binocle_app_desc_t app_desc = {0};
   app = binocle_app_new();
   binocle_app_init(&app, &app_desc);
@@ -339,7 +291,7 @@ int main(int argc, char *argv[])
   binocle_window_set_minimum_size(window, DESIGN_WIDTH, DESIGN_HEIGHT);
   adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING, BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window->original_width, window->original_height, window->original_width, window->original_height);
   game.gfx.camera = binocle_camera_new(adapter);
-  input = binocle_input_new();
+  game.input = binocle_input_new();
   game.gfx.gd = binocle_gd_new();
   binocle_gd_init(&game.gfx.gd, window);
 
@@ -439,21 +391,7 @@ int main(int argc, char *argv[])
   };
   screen_shader = sg_make_shader(&screen_shader_desc);
 
-  char filename[1024];
-  sprintf(filename, "%s%s", binocle_data_dir, "wabbit_alpha.png");
-  image = binocle_image_load(filename);
-  material = binocle_material_new();
-  material->albedo_texture = image;
-  material->shader = game.gfx.default_shader;
-//  srand48(42);
-  gravity = -0.5f * 100.0f;
-  bounding_box.min.x = 0;
-  bounding_box.min.y = 0;
-  bounding_box.max.x = DESIGN_WIDTH;
-  bounding_box.max.y = DESIGN_HEIGHT;
-
   cache_system_init();
-  entity_system_init(&game.pools, number_of_sprites);
 
   char font_filename[1024];
   sprintf(font_filename, "%s%s", binocle_data_dir, "font.fnt");
@@ -496,18 +434,16 @@ int main(int argc, char *argv[])
 #ifdef __EMSCRIPTEN__
   emscripten_set_main_loop(main_loop, 0, 1);
 #else
-  while (!input.quit_requested) {
+  while (!game.input.quit_requested) {
     main_loop();
   }
 #endif
   binocle_log_info("Quit requested");
 #endif
-  binocle_material_destroy(material);
-  binocle_image_destroy(image);
   free(binocle_data_dir);
   binocle_app_destroy(&app);
   cooldown_system_shutdown(&game.pools);
-  entity_system_shutdown(&game.pools);
+  ecs_fini(game.ecs);
 }
 
 
