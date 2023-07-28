@@ -34,6 +34,7 @@
 #include "cache.h"
 #include "en/hero.h"
 #include "level.h"
+#include "game_camera.h"
 
 #define CUTE_TILED_IMPLEMENTATION
 #include "cute_tiled.h"
@@ -100,6 +101,7 @@ ECS_COMPONENT_DECLARE(graphics_t);
 ECS_COMPONENT_DECLARE(profile_t);
 ECS_COMPONENT_DECLARE(node_t);
 ECS_COMPONENT_DECLARE(level_t);
+ECS_COMPONENT_DECLARE(game_camera_t);
 
 void create_entity() {
   ecs_entity_t en = hero_new();
@@ -108,6 +110,16 @@ void create_entity() {
   game.hero = en;
 //  entity_set_pos_pixel(&game.pools, en, (float)rand()/RAND_MAX * bounding_box.max.x, (float)rand()/RAND_MAX * bounding_box.max.y);
 //  entity_set_speed(&game.pools, en, (float)rand()/RAND_MAX * 2.0f, ((float)rand()/RAND_MAX * 2.0f) - 1.0f);
+}
+
+void create_game_camera() {
+  game.game_camera = ecs_set_name(game.ecs, 0, "game_camera");
+  ecs_set(game.ecs, game.game_camera, game_camera_t, {0});
+  const game_camera_t *original_game_camera = ecs_get(game.ecs, game.game_camera, game_camera_t);
+  game_camera_t gc = game_camera_new();
+  memcpy(original_game_camera, &gc, sizeof(game_camera_t));
+  game_camera_track_entity(original_game_camera, game.hero, false, 1.0f);
+  game_camera_center_on_target(original_game_camera);
 }
 
 void update_entity(entity_handle_t handle, entity_t *entity) {
@@ -199,9 +211,7 @@ void main_loop() {
 
 
   kmAABB2 viewport = binocle_camera_get_viewport(game.gfx.camera);
-  kmMat4 matrix;
-  kmMat4Identity(&matrix);
-  binocle_sprite_batch_begin(&game.gfx.sprite_batch, binocle_camera_get_viewport(game.gfx.camera), BINOCLE_SPRITE_SORT_MODE_DEFERRED, &game.gfx.default_shader, &matrix);
+  binocle_sprite_batch_begin(&game.gfx.sprite_batch, binocle_camera_get_viewport(game.gfx.camera), BINOCLE_SPRITE_SORT_MODE_DEFERRED, &game.gfx.default_shader, binocle_camera_get_transform_matrix(&game.gfx.camera));
 
   kmVec2 scale;
   scale.x = 1.0f;
@@ -209,8 +219,10 @@ void main_loop() {
 
   ecs_run(game.ecs, game.systems.update_entities, dt, NULL);
   ecs_run(game.ecs, game.systems.post_update_entities, dt, NULL);
+  ecs_run(game.ecs, game.systems.update_game_camera, dt, NULL);
   ecs_run(game.ecs, game.systems.draw_level, dt, NULL);
   ecs_run(game.ecs, game.systems.draw, dt, NULL);
+  ecs_run(game.ecs, game.systems.post_update_game_camera, dt, NULL);
 
   kmMat4 view_matrix;
   kmMat4Identity(&view_matrix);
@@ -244,6 +256,7 @@ int main(int argc, char *argv[])
   ECS_COMPONENT_DEFINE(game.ecs, profile_t);
   ECS_COMPONENT_DEFINE(game.ecs, node_t);
   ECS_COMPONENT_DEFINE(game.ecs, level_t);
+  ECS_COMPONENT_DEFINE(game.ecs, game_camera_t);
 
   game.systems.draw = ecs_system(game.ecs, {
     .entity = ecs_entity(game.ecs, {
@@ -292,6 +305,26 @@ int main(int argc, char *argv[])
       {.id = ecs_id(graphics_t)},
     },
     .callback = entity_system_post_update
+  });
+
+  game.systems.update_game_camera = ecs_system(game.ecs, {
+    .entity = ecs_entity(game.ecs, {
+      .name = "update_game_camera"
+    }),
+    .query.filter.terms = {
+      {.id = ecs_id(game_camera_t)},
+    },
+    .callback = update_game_camera
+  });
+
+  game.systems.post_update_game_camera = ecs_system(game.ecs, {
+    .entity = ecs_entity(game.ecs, {
+      .name = "post_update_game_camera"
+    }),
+    .query.filter.terms = {
+      {.id = ecs_id(game_camera_t)},
+    },
+    .callback = post_update_game_camera
   });
 
   binocle_app_desc_t app_desc = {0};
@@ -453,7 +486,8 @@ int main(int argc, char *argv[])
 
   spawner_t *hs = level_get_hero_spawner(level);
   create_entity();
-  entity_set_pos_grid(game.hero, hs->cx, hs->cy);
+  entity_set_pos_grid(game.hero, hs->cx+10, hs->cy);
+  create_game_camera();
 
 
 #ifdef GAMELOOP

@@ -308,63 +308,64 @@ void entity_on_pre_step_y(ecs_entity_t en, level_t *level, physics_t *physics, c
   }
 }
 
-float entity_get_attach_x(entity_handle_t handle) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
-  return (entity->cx + entity->xr) * GRID;
+float entity_get_attach_x(physics_t *physics) {
+  return (physics->cx + physics->xr) * GRID;
 }
 
-float entity_get_attach_y(entity_handle_t handle) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
-  return (entity->cy + entity->yr) * GRID;
+float entity_get_attach_y(physics_t *physics) {
+  return (physics->cy + physics->yr) * GRID;
 }
 
-float entity_get_left(entity_handle_t handle) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
-  return entity_get_attach_x(handle) + (0.0f - entity->pivot_x) * entity->wid;
+float entity_get_left(physics_t *physics, graphics_t *graphics, collider_t *collider) {
+  return entity_get_attach_x(physics) + (0.0f - graphics->pivot_x) * collider->wid;
 }
 
-float entity_get_right(entity_handle_t handle) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
-  return entity_get_attach_x(handle) + (1.0f - entity->pivot_x) * entity->wid;
+float entity_get_right(physics_t *physics, graphics_t *graphics, collider_t *collider) {
+  return entity_get_attach_x(physics) + (1.0f - graphics->pivot_x) * collider->wid;
 }
 
-float entity_get_top(entity_handle_t handle) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
-  return entity_get_attach_y(handle) + (1.0f - entity->pivot_y) * entity->hei;
+float entity_get_top(physics_t *physics, graphics_t *graphics, collider_t *collider) {
+  return entity_get_attach_y(physics) + (1.0f - graphics->pivot_y) * collider->hei;
 }
 
-float entity_get_bottom(entity_handle_t handle) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
-  return entity_get_attach_y(handle) + (0.0f - entity->pivot_y) * entity->hei;
+float entity_get_bottom(physics_t *physics, graphics_t *graphics, collider_t *collider) {
+  return entity_get_attach_y(physics) + (0.0f - graphics->pivot_y) * collider->hei;
 }
 
-float entity_get_center_x(entity_handle_t handle) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
-  return entity_get_attach_x(handle) + (0.5f - entity->pivot_x) * entity->wid;
+float entity_get_center_x(ecs_entity_t en) {
+  physics_t *physics = ecs_get(game.ecs, en, physics_t);
+  graphics_t *graphics = ecs_get(game.ecs, en, graphics_t);
+  collider_t *collider = ecs_get(game.ecs, en, collider_t);
+  return entity_get_attach_x(physics) + (0.5f - graphics->pivot_x) * collider->wid;
 }
 
-float entity_get_center_y(entity_handle_t handle) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
-  return entity_get_attach_y(handle) + (0.5f - entity->pivot_y) * entity->hei;
+float entity_get_center_y(ecs_entity_t en) {
+  physics_t *physics = ecs_get(game.ecs, en, physics_t);
+  graphics_t *graphics = ecs_get(game.ecs, en, graphics_t);
+  collider_t *collider = ecs_get(game.ecs, en, collider_t);
+  return entity_get_attach_y(physics) + (0.5f - graphics->pivot_y) * collider->hei;
 }
 
-bool entity_is_inside(entity_handle_t handle, float px, float py) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
-  return (px >= entity_get_left(handle) && px <= entity_get_right(handle) && py >= entity_get_bottom(handle) && py <= entity_get_top(handle));
+bool entity_is_inside(physics_t *physics, graphics_t *graphics, collider_t *collider, float px, float py) {
+  return (px >= entity_get_left(physics, graphics, collider)
+  && px <= entity_get_right(physics, graphics, collider)
+  && py >= entity_get_bottom(physics, graphics, collider)
+  && py <= entity_get_top(physics, graphics, collider));
 }
 
-void entity_draw_debug(entity_handle_t handle) {
-  entity_t *entity = entity_at(&game.pools, handle.id);
+/*
+void entity_draw_debug(physics_t *physics, graphics_t *graphics, collider_t *collider) {
   if (game.debug_enabled) {
     kmAABB2 viewport = binocle_camera_get_viewport(game.gfx.camera);
     char s[1024];
-    sprintf(s, "(%d,%d) (%.0f, %.0f)", entity->cx, entity->cy, entity_get_center_x(handle), entity_get_center_y(handle));
-    binocle_ttfont_draw_string(&game.gfx.default_font, s, &game.gfx.gd, entity_get_center_x(handle), entity_get_top(handle), viewport, binocle_color_white(), &game.gfx.camera, LAYER_TEXT);
+    sprintf(s, "(%d,%d) (%.0f, %.0f)", physics->cx, physics->cy, entity_get_center_x(physics, graphics, collider), entity_get_center_y(physics, graphics, collider));
+    binocle_ttfont_draw_string(&game.gfx.default_font, s, &game.gfx.gd, entity_get_center_x(physics, graphics, collider), entity_get_top(physics, graphics, collider), viewport, binocle_color_white(), &game.gfx.camera, LAYER_TEXT);
     kmAABB2 rect;
     kmVec2 center;
-    center.x = entity_get_center_x(handle);
-    center.y = entity_get_center_y(handle);
-    kmAABB2Initialize(&rect, &center, entity->wid, entity->hei, 0);
+    center.x = entity_get_center_x(physics, graphics, collider);
+    center.y = entity_get_center_y(physics, graphics, collider);
+    kmAABB2Initialize(&rect, &center, collider->wid, collider->hei, 0);
     binocle_gd_draw_rect(&game.gfx.gd, rect, binocle_color_green_translucent(), viewport, &game.gfx.camera, NULL, LAYER_TEXT + 1);
   }
 }
+*/

@@ -21,6 +21,8 @@ void entity_bump(entity_handle_t handle, float x, float y);
 void entity_cancel_velocities(entity_handle_t handle);
 void entity_on_pre_step_x(ecs_entity_t en, level_t *level, physics_t *physics, collider_t *collider);
 void entity_on_pre_step_y(ecs_entity_t en, level_t *level, physics_t *physics, collider_t *collider);
+float entity_get_center_x(ecs_entity_t en);
+float entity_get_center_y(ecs_entity_t en);
 
 void draw_entities(ecs_iter_t *it);
 #endif //GAME_TEMPLATE_ENTITY_H

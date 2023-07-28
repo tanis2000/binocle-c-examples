@@ -128,6 +128,8 @@ typedef struct game_t {
   ecs_entity_t level;
   /// The hero entity
   ecs_entity_t hero;
+  /// The game camera entity
+  ecs_entity_t game_camera;
   struct {
     binocle_gd gd;
     binocle_camera camera;
@@ -138,6 +140,8 @@ typedef struct game_t {
   struct {
     ecs_entity_t update_entities;
     ecs_entity_t post_update_entities;
+    ecs_entity_t update_game_camera;
+    ecs_entity_t post_update_game_camera;
     ecs_entity_t draw;
     ecs_entity_t draw_level;
   } systems;
@@ -246,6 +250,33 @@ typedef struct level_t {
   spawner_t *hero_spawners;
 } level_t;
 
+typedef struct l_point_t {
+  float cx;
+  float cy;
+  float xr;
+  float yr;
+} l_point_t;
+
+typedef struct game_camera_t {
+  l_point_t raw_focus;
+  l_point_t clamped_focus;
+  bool clamp_to_level_bounds;
+  float dx;
+  float dy;
+
+  ecs_entity_t target;
+  float target_off_x;
+  float target_off_y;
+  float dead_zone_pct_x;
+  float dead_zone_pct_y;
+  float base_frict;
+  float bump_off_x;
+  float bump_off_y;
+  float zoom;
+  float tracking_speed;
+  float brake_dist_near_bounds;
+  float shake_power;
+} game_camera_t;
 
 extern ECS_COMPONENT_DECLARE(health_t);
 extern ECS_COMPONENT_DECLARE(collider_t);
@@ -254,5 +285,6 @@ extern ECS_COMPONENT_DECLARE(graphics_t);
 extern ECS_COMPONENT_DECLARE(profile_t);
 extern ECS_COMPONENT_DECLARE(node_t);
 extern ECS_COMPONENT_DECLARE(level_t);
+extern ECS_COMPONENT_DECLARE(game_camera_t);
 
 #endif //GAME_TEMPLATE_TYPES_H
