@@ -7,7 +7,7 @@
 
 #include "types.h"
 
-ecs_entity_t hero_new();
-void hero_input_update(ecs_iter_t *it);
+entity_t *hero_new();
+void hero_input_update(entity_t *e, float dt);
 
 #endif //GAME_TEMPLATE_HERO_H

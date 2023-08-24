@@ -5,12 +5,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #if defined(__WIN32__)
 #include <random>
 #endif
 #ifdef __EMSCRIPTEN__
 #include "emscripten.h"
 #endif
+
 #include "binocle_sdl.h"
 #include "backend/binocle_color.h"
 #include "binocle_window.h"
@@ -22,7 +24,9 @@
 #include <binocle_sprite.h>
 #include <backend/binocle_material.h>
 #include <binocle_array.h>
+
 #define BINOCLE_MATH_IMPL
+
 #include "binocle_math.h"
 #include "binocle_gd.h"
 #include "binocle_log.h"
@@ -37,9 +41,11 @@
 #include "game_camera.h"
 
 #define CUTE_TILED_IMPLEMENTATION
+
 #include "cute_tiled.h"
 
 #define STB_DS_IMPLEMENTATION
+
 #include "stb_ds.h"
 
 
@@ -86,41 +92,22 @@ binocle_sprite *font_sprite;
 kmVec2 font_sprite_pos;
 sg_shader screen_shader;
 
+entity_t entities[MAX_ENTITIES];
 game_t game;
 
-ECS_COMPONENT_DECLARE(health_t);
-ECS_COMPONENT_DECLARE(collider_t);
-ECS_COMPONENT_DECLARE(physics_t);
-ECS_COMPONENT_DECLARE(graphics_t);
-ECS_COMPONENT_DECLARE(profile_t);
-ECS_COMPONENT_DECLARE(node_t);
-ECS_COMPONENT_DECLARE(level_t);
-ECS_COMPONENT_DECLARE(game_camera_t);
-
-ECS_TAG_DECLARE(player_t);
-
 void create_entity() {
-  ecs_entity_t en = hero_new();
-//  graphics_t *g = ecs_get_mut(game.ecs, en, graphics_t);
-//  entity_load_image(g, "wabbit_alpha.png", 26, 37);
-  game.hero = en;
-//  entity_set_pos_pixel(&game.pools, en, (float)rand()/RAND_MAX * bounding_box.max.x, (float)rand()/RAND_MAX * bounding_box.max.y);
-//  entity_set_speed(&game.pools, en, (float)rand()/RAND_MAX * 2.0f, ((float)rand()/RAND_MAX * 2.0f) - 1.0f);
+  game.hero = hero_new();
 }
 
 void create_game_camera() {
-  game.game_camera = ecs_set_name(game.ecs, 0, "game_camera");
-  ecs_set(game.ecs, game.game_camera, game_camera_t, {0});
-  const game_camera_t *original_game_camera = ecs_get(game.ecs, game.game_camera, game_camera_t);
-  game_camera_t gc = game_camera_new();
-  memcpy(original_game_camera, &gc, sizeof(game_camera_t));
-  game_camera_track_entity(original_game_camera, game.hero, false, 1.0f);
-  game_camera_center_on_target(original_game_camera);
+  game.game_camera = game_camera_new();
+  game_camera_track_entity(&game.game_camera, game.hero, false, 1.0f);
+  game_camera_center_on_target(&game.game_camera);
 }
 
 void main_loop() {
   binocle_window_begin_frame(window);
-  float dt = (float)binocle_window_get_frame_time(window) / 1000.0f;
+  float dt = (float) binocle_window_get_frame_time(window) / 1000.0f;
   game.dt = dt;
 
   binocle_input_update(&game.input);
@@ -147,25 +134,34 @@ void main_loop() {
 //  }
 
 
-  kmAABB2 viewport = binocle_camera_get_viewport(game.gfx.camera);
-  binocle_sprite_batch_begin(&game.gfx.sprite_batch, binocle_camera_get_viewport(game.gfx.camera), BINOCLE_SPRITE_SORT_MODE_DEFERRED, &game.gfx.default_shader, binocle_camera_get_transform_matrix(&game.gfx.camera));
+  kmAABB2 viewport;
+  kmAABB2Initialize(&viewport, &(kmVec2){.x = DESIGN_WIDTH/2, .y = DESIGN_HEIGHT/2}, DESIGN_WIDTH, DESIGN_HEIGHT, 0);
+  binocle_sprite_batch_begin(&game.gfx.sprite_batch, viewport,
+                             BINOCLE_SPRITE_SORT_MODE_DEFERRED, &game.gfx.default_shader,
+                             binocle_camera_get_transform_matrix(&game.gfx.camera));
 
   kmVec2 scale;
   scale.x = 1.0f;
   scale.y = 1.0f;
 
-  ecs_run(game.ecs, game.systems.update_entities, dt, NULL);
-  ecs_run(game.ecs, game.systems.hero_input_update, dt, NULL);
-  ecs_run(game.ecs, game.systems.post_update_entities, dt, NULL);
-  ecs_run(game.ecs, game.systems.update_game_camera, dt, NULL);
-  ecs_run(game.ecs, game.systems.draw_level, dt, NULL);
-  ecs_run(game.ecs, game.systems.draw, dt, NULL);
-  ecs_run(game.ecs, game.systems.post_update_game_camera, dt, NULL);
+  for (int i = 0; i < game.num_entities; i++) {
+    entity_update(&game.entities[i], dt);
+  }
+  hero_input_update(game.hero, dt);
+  for (int i = 0; i < game.num_entities; i++) {
+    entity_post_update(&game.entities[i], dt);
+  }
+  game_camera_update(&game.game_camera);
+  level_render(&game.level);
+  for (int i = 0; i < game.num_entities; i++) {
+    entity_draw(&game.entities[i]);
+  }
+  game_camera_post_update(&game.game_camera);
 
   kmMat4 view_matrix;
   kmMat4Identity(&view_matrix);
   // Gets the viewport calculated by the adapter
-  kmAABB2 vp = binocle_viewport_adapter_get_viewport(*adapter);
+  kmAABB2 screen_viewport = binocle_viewport_adapter_get_viewport(*adapter);
   //binocle_sprite_draw(font_sprite, &gd, (uint64_t)font_sprite_pos.x, (uint64_t)font_sprite_pos.y, adapter.viewport);
 
 
@@ -175,109 +171,18 @@ void main_loop() {
 
   binocle_sprite_batch_end(&game.gfx.sprite_batch, viewport);
 
-  binocle_gd_render(&game.gfx.gd, window, DESIGN_WIDTH, DESIGN_HEIGHT, vp, view_matrix, 1.0f);
+  binocle_gd_render_offscreen(&game.gfx.gd);
+  binocle_gd_render_flat(&game.gfx.gd);
+  binocle_gd_render_screen(&game.gfx.gd, window, DESIGN_WIDTH, DESIGN_HEIGHT, screen_viewport, game.gfx.camera.viewport_adapter->scale_matrix, game.gfx.camera.viewport_adapter->inverse_multiplier);
 
   binocle_window_refresh(window);
   binocle_window_end_frame(window);
   //binocle_log_info("FPS: %d", binocle_window_get_fps(&window));
 }
 
-int main(int argc, char *argv[])
-{
-  game = (game_t){0};
-  game.ecs = ecs_init();
-
-  ECS_COMPONENT_DEFINE(game.ecs, health_t);
-  ECS_COMPONENT_DEFINE(game.ecs, graphics_t);
-  ECS_COMPONENT_DEFINE(game.ecs, physics_t);
-  ECS_COMPONENT_DEFINE(game.ecs, collider_t);
-  ECS_COMPONENT_DEFINE(game.ecs, profile_t);
-  ECS_COMPONENT_DEFINE(game.ecs, node_t);
-  ECS_COMPONENT_DEFINE(game.ecs, level_t);
-  ECS_COMPONENT_DEFINE(game.ecs, game_camera_t);
-
-  ECS_TAG_DEFINE(game.ecs, player_t);
-
-  game.systems.draw = ecs_system(game.ecs, {
-    .entity = ecs_entity(game.ecs, {
-      .name = "draw"
-    }),
-    .query.filter.terms = {
-      {.id = ecs_id(graphics_t)}
-    },
-    .callback = draw_entities
-  });
-
-  game.systems.draw_level = ecs_system(game.ecs, {
-    .entity = ecs_entity(game.ecs, {
-      .name = "draw_level"
-    }),
-    .query.filter.terms = {
-      {.id = ecs_id(level_t)}
-    },
-    .callback = level_render
-  });
-
-  ecs_query_t  *q_level = ecs_query(game.ecs, {
-    .filter.terms = {
-      { ecs_id(level_t), .inout = EcsIn },
-    }
-  });
-
-  game.systems.update_entities = ecs_system(game.ecs, {
-    .entity = ecs_entity(game.ecs, {
-      .name = "update_entities"
-    }),
-    .query.filter.terms = {
-      {.id = ecs_id(physics_t)},
-      {.id = ecs_id(collider_t)},
-    },
-    .ctx = q_level,
-    .callback = entity_system_update
-  });
-
-  game.systems.post_update_entities = ecs_system(game.ecs, {
-    .entity = ecs_entity(game.ecs, {
-      .name = "post_update_entities"
-    }),
-    .query.filter.terms = {
-      {.id = ecs_id(physics_t)},
-      {.id = ecs_id(graphics_t)},
-    },
-    .callback = entity_system_post_update
-  });
-
-  game.systems.update_game_camera = ecs_system(game.ecs, {
-    .entity = ecs_entity(game.ecs, {
-      .name = "update_game_camera"
-    }),
-    .query.filter.terms = {
-      {.id = ecs_id(game_camera_t)},
-    },
-    .callback = update_game_camera
-  });
-
-  game.systems.post_update_game_camera = ecs_system(game.ecs, {
-    .entity = ecs_entity(game.ecs, {
-      .name = "post_update_game_camera"
-    }),
-    .query.filter.terms = {
-      {.id = ecs_id(game_camera_t)},
-    },
-    .callback = post_update_game_camera
-  });
-
-  game.systems.hero_input_update = ecs_system(game.ecs, {
-    .entity = ecs_entity(game.ecs, {
-      .name = "hero_input_update"
-    }),
-    .query.filter.terms = {
-      {.id = ecs_id(physics_t)},
-      {.id = ecs_id(health_t)},
-      {.id = ecs_id(player_t)},
-    },
-    .callback = hero_input_update
-  });
+int main(int argc, char *argv[]) {
+  game = (game_t) {0};
+  entity_system_init();
 
   binocle_app_desc_t app_desc = {0};
   app = binocle_app_new();
@@ -289,12 +194,13 @@ int main(int argc, char *argv[])
   window = binocle_window_new(DESIGN_WIDTH, DESIGN_HEIGHT, "Binocle Sprite Batch");
   binocle_window_set_background_color(window, binocle_color_azure());
   binocle_window_set_minimum_size(window, DESIGN_WIDTH, DESIGN_HEIGHT);
-  adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING, BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window->original_width, window->original_height, window->original_width, window->original_height);
+  adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING,
+                                         BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window->original_width,
+                                         window->original_height, window->original_width, window->original_height);
   game.gfx.camera = binocle_camera_new(adapter);
   game.input = binocle_input_new();
   game.gfx.gd = binocle_gd_new();
   binocle_gd_init(&game.gfx.gd, window);
-
 
 
 #ifdef BINOCLE_GL
@@ -321,16 +227,16 @@ int main(int argc, char *argv[])
     .vs.bytecode.size = sizeof(default_vs_bytecode),
 #endif
     .attrs = {
-      [0] = { .name = "vertexPosition"},
-      [1] = { .name = "vertexColor"},
-      [2] = { .name = "vertexTCoord"},
+      [0] = {.name = "vertexPosition"},
+      [1] = {.name = "vertexColor"},
+      [2] = {.name = "vertexTCoord"},
     },
     .vs.uniform_blocks[0] = {
       .size = sizeof(default_shader_params_t),
       .uniforms = {
-        [0] = { .name = "projectionMatrix", .type = SG_UNIFORMTYPE_MAT4},
-        [1] = { .name = "viewMatrix", .type = SG_UNIFORMTYPE_MAT4},
-        [2] = { .name = "modelMatrix", .type = SG_UNIFORMTYPE_MAT4},
+        [0] = {.name = "projectionMatrix", .type = SG_UNIFORMTYPE_MAT4},
+        [1] = {.name = "viewMatrix", .type = SG_UNIFORMTYPE_MAT4},
+        [2] = {.name = "modelMatrix", .type = SG_UNIFORMTYPE_MAT4},
       }
     },
 #ifdef BINOCLE_GL
@@ -339,7 +245,7 @@ int main(int argc, char *argv[])
     .fs.bytecode.ptr = default_fs_bytecode,
     .fs.bytecode.size = sizeof(default_fs_bytecode),
 #endif
-    .fs.images[0] = { .name = "tex0", .image_type = SG_IMAGETYPE_2D},
+    .fs.images[0] = {.name = "tex0", .image_type = SG_IMAGETYPE_2D},
   };
   game.gfx.default_shader = sg_make_shader(&default_shader_desc);
 
@@ -370,7 +276,7 @@ int main(int argc, char *argv[])
     .vs.uniform_blocks[0] = {
       .size = sizeof(screen_shader_vs_params_t),
       .uniforms = {
-        [0] = { .name = "transform", .type = SG_UNIFORMTYPE_MAT4},
+        [0] = {.name = "transform", .type = SG_UNIFORMTYPE_MAT4},
       },
     },
 #ifdef BINOCLE_GL
@@ -379,13 +285,13 @@ int main(int argc, char *argv[])
     .fs.byte_code = screen_fs_bytecode,
     .fs.byte_code_size = sizeof(screen_fs_bytecode),
 #endif
-    .fs.images[0] = { .name = "tex0", .image_type = SG_IMAGETYPE_2D},
+    .fs.images[0] = {.name = "tex0", .image_type = SG_IMAGETYPE_2D},
     .fs.uniform_blocks[0] = {
       .size = sizeof(screen_shader_fs_params_t),
       .uniforms = {
-        [0] = { .name = "resolution", .type = SG_UNIFORMTYPE_FLOAT2 },
-        [1] = { .name = "scale", .type = SG_UNIFORMTYPE_FLOAT2 },
-        [2] = { .name = "viewport", .type = SG_UNIFORMTYPE_FLOAT2 },
+        [0] = {.name = "resolution", .type = SG_UNIFORMTYPE_FLOAT2},
+        [1] = {.name = "scale", .type = SG_UNIFORMTYPE_FLOAT2},
+        [2] = {.name = "viewport", .type = SG_UNIFORMTYPE_FLOAT2},
       },
     },
   };
@@ -413,18 +319,14 @@ int main(int argc, char *argv[])
 
   binocle_gd_setup_default_pipeline(&game.gfx.gd, DESIGN_WIDTH, DESIGN_HEIGHT, game.gfx.default_shader, screen_shader);
 
-  game.level = ecs_set_name(game.ecs, 0, "level");
-  ecs_set(game.ecs, game.level, level_t, {
-    0
-  });
-  level_t *level = ecs_get(game.ecs, game.level, level_t);
-  level_load_tilemap(level, "maps/map01.json");
+  game.level = (level_t) {0};
+  level_load_tilemap(&game.level, "maps/map01.json");
 
   cooldown_system_init(&game.pools, 16);
 
-  spawner_t *hs = level_get_hero_spawner(level);
+  spawner_t *hs = level_get_hero_spawner(&game.level);
   create_entity();
-  entity_set_pos_grid(game.hero, hs->cx+10, hs->cy);
+  entity_set_pos_grid(game.hero, hs->cx + 10, hs->cy);
   create_game_camera();
 
 
@@ -443,7 +345,6 @@ int main(int argc, char *argv[])
   free(binocle_data_dir);
   binocle_app_destroy(&app);
   cooldown_system_shutdown(&game.pools);
-  ecs_fini(game.ecs);
 }
 
 

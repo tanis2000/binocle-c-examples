@@ -7,25 +7,46 @@
 
 #include "types.h"
 
-void entity_system_update(ecs_iter_t *it);
-void entity_system_post_update(ecs_iter_t *it);
+void entity_system_init();
 
-entity_handle_t entity_make(pools_t *pools);
-void entity_load_image(graphics_t *g, const char *filename, uint32_t width, uint32_t height);
-void entity_set_pos_grid(ecs_entity_t en, int32_t x, int32_t y);
-void entity_set_pos_pixel(pools_t *pools, entity_handle_t handle, int32_t x, int32_t y);
-void entity_set_speed(pools_t *pools, entity_handle_t handle, float x, float y);
-void entity_bump(entity_handle_t handle, float x, float y);
-void entity_cancel_velocities(entity_handle_t handle);
-void entity_on_pre_step_x(ecs_entity_t en, level_t *level, physics_t *physics, collider_t *collider);
-void entity_on_pre_step_y(ecs_entity_t en, level_t *level, physics_t *physics, collider_t *collider);
-float entity_get_center_x(ecs_entity_t en);
-float entity_get_center_y(ecs_entity_t en);
-bool entity_is_alive(health_t *health);
-bool entity_on_ground(ecs_entity_t en);
-void entity_add_animation(graphics_t *graphics, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop);
-void entity_play_animation(graphics_t *graphics, ANIMATION_ID id, bool force);
-void entity_update_animation(graphics_t *graphics, float dt);
+void entity_update(entity_t *e, float dt);
 
-void draw_entities(ecs_iter_t *it);
+void entity_post_update(entity_t *e, float dt);
+
+entity_t *entity_spawn();
+
+void entity_free(entity_t *e);
+
+void entity_load_image(entity_t *e, const char *filename, uint32_t width, uint32_t height);
+
+void entity_set_pos_grid(entity_t *e, int32_t x, int32_t y);
+
+void entity_set_pos_pixel(entity_t *e, int32_t x, int32_t y);
+
+void entity_set_speed(entity_t *e, float x, float y);
+
+void entity_bump(entity_t *e, float x, float y);
+
+void entity_cancel_velocities(entity_t *e);
+
+void entity_on_pre_step_x(entity_t *e, level_t *level);
+
+void entity_on_pre_step_y(entity_t *e, level_t *level);
+
+float entity_get_center_x(entity_t *e);
+
+float entity_get_center_y(entity_t *e);
+
+bool entity_is_alive(entity_t *e);
+
+bool entity_on_ground(entity_t *e);
+
+void entity_add_animation(entity_t *e, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop);
+
+void entity_play_animation(entity_t *e, ANIMATION_ID id, bool force);
+
+void entity_update_animation(entity_t *e, float dt);
+
+void entity_draw(entity_t *e);
+
 #endif //GAME_TEMPLATE_ENTITY_H
