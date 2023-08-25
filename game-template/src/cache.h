@@ -10,5 +10,6 @@
 void cache_system_init();
 
 sg_image cache_load_image(const char *filename);
+binocle_audio_music cache_load_music(const char *filename);
 
 #endif //GAME_TEMPLATE_CACHE_H

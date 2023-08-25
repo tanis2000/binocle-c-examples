@@ -124,4 +124,13 @@ float cooldown_get(pools_t *pools, const char *name) {
   return 0;
 }
 
-// TODO: add get_ratio and to_string
+float cooldown_get_ratio(pools_t *pools, const char *name) {
+  if (cooldown_has(pools, name)) {
+    cooldown_t *cd = cooldown_get_with_name(pools, name);
+    if (cd->remaining_seconds <= 0) {
+      return 0;
+    }
+    return cd->remaining_seconds / cd->total_seconds;
+  }
+  return 0;
+}

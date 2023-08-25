@@ -9,6 +9,8 @@
 
 void entity_system_init();
 
+void entity_system_update();
+
 void entity_update(entity_t *e, float dt);
 
 void entity_post_update(entity_t *e, float dt);
@@ -41,12 +43,22 @@ bool entity_is_alive(entity_t *e);
 
 bool entity_on_ground(entity_t *e);
 
-void entity_add_animation(entity_t *e, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop);
+void entity_add_animation(entity_t *e, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop, void (*on_finish)(struct entity_t *e));
 
 void entity_play_animation(entity_t *e, ANIMATION_ID id, bool force);
 
 void entity_update_animation(entity_t *e, float dt);
 
 void entity_draw(entity_t *e);
+
+float entity_get_attach_x(entity_t *e);
+
+float entity_get_attach_y(entity_t *e);
+
+float entity_get_bottom(entity_t *e);
+
+float entity_dir_to_ang(entity_t *e);
+
+void entity_kill(entity_t *e);
 
 #endif //GAME_TEMPLATE_ENTITY_H

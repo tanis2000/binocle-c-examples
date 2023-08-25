@@ -3,6 +3,8 @@
 //
 
 #include "l_point.h"
+#include "m.h"
+#include "entity.h"
 
 l_point_t l_point_new() {
   return (l_point_t){0};
@@ -70,19 +72,29 @@ void l_point_set_level_case(l_point_t *p, int32_t x, int32_t y, float xr, float 
   p->yr = yr;
 }
 
-int32_t l_point_dist_case(physics_t *physics, l_point_t *p, int32_t tcx, int32_t tcy, float txr, float tyr) {
-  //TODO: implement
-  return 0;
+float l_point_dist_case(l_point_t *self, entity_t *e, l_point_t *p, int32_t tcx, int32_t tcy, float txr, float tyr) {
+  if (e != NULL) {
+    return m_dist(self->cx+self->xr, self->cy+self->yr, e->cx+e->xr, e->cy+e->yr);
+  } else if (p != NULL) {
+    return m_dist(self->cx+self->xr, self->cy+self->yr, p->cx+p->xr, p->cy+p->yr);
+  } else {
+    return m_dist(self->cx+self->xr, self->cy+self->yr, tcx+txr, tcy+tyr);
+  }
 }
 
-int32_t l_point_dist_px(physics_t *physics, l_point_t *p, int32_t lvl_x, int32_t lvl_y) {
-  //TODO: implement
-  return 0;
+float l_point_dist_px(l_point_t *self, entity_t *e, l_point_t *p, int32_t lvl_x, int32_t lvl_y) {
+  if (e != NULL) {
+    return m_dist(l_point_get_level_x(self), l_point_get_level_y(self), entity_get_attach_x(e), entity_get_attach_y(e));
+  } else if (p != NULL) {
+    return m_dist(l_point_get_level_x(self), l_point_get_level_y(self), l_point_get_level_x(p), l_point_get_level_y(p));
+  } else {
+    return m_dist(l_point_get_level_x(self), l_point_get_level_y(self), lvl_x, lvl_y);
+  }
 }
 
-float l_point_ang_to(l_point_t *self, physics_t *physics, l_point_t *p, int32_t lvl_x, int32_t lvl_y) {
-  if (physics != NULL) {
-    return atan2f((physics->cy + physics->yr) - l_point_get_cyf(self), (physics->cx + physics->xr) - l_point_get_cxf(self));
+float l_point_ang_to(l_point_t *self, entity_t *e, l_point_t *p, int32_t lvl_x, int32_t lvl_y) {
+  if (e != NULL) {
+    return atan2f((e->cy + e->yr) - l_point_get_cyf(self), (e->cx + e->xr) - l_point_get_cxf(self));
   } else if (p != NULL) {
     return atan2f(l_point_get_cyf(p) - l_point_get_cyf(self), l_point_get_cxf(p) - l_point_get_cxf(self));
   }  else {

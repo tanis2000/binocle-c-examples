@@ -84,7 +84,7 @@ typedef struct screen_shader_vs_params_t {
 binocle_app app;
 char *binocle_data_dir = NULL;
 binocle_window *window;
-binocle_viewport_adapter *adapter;
+//binocle_viewport_adapter *adapter;
 binocle_bitmapfont *font;
 sg_image font_image;
 binocle_material *font_material;
@@ -109,6 +109,7 @@ void main_loop() {
   binocle_window_begin_frame(window);
   float dt = (float) binocle_window_get_frame_time(window) / 1000.0f;
   game.dt = dt;
+  game.elapsed_time += dt;
 
   binocle_input_update(&game.input);
 
@@ -116,7 +117,7 @@ void main_loop() {
     kmVec2 oldWindowSize = {.x = window->width, .y = window->height};
     window->width = game.input.newWindowSize.x;
     window->height = game.input.newWindowSize.y;
-    binocle_viewport_adapter_reset(adapter, oldWindowSize, game.input.newWindowSize);
+    binocle_viewport_adapter_reset(game.gfx.camera.viewport_adapter, oldWindowSize, game.input.newWindowSize);
     game.input.resized = false;
   }
 
@@ -151,17 +152,23 @@ void main_loop() {
   for (int i = 0; i < game.num_entities; i++) {
     entity_post_update(&game.entities[i], dt);
   }
-  game_camera_update(&game.game_camera);
+  game_camera_update(&game.game_camera, dt);
   level_render(&game.level);
   for (int i = 0; i < game.num_entities; i++) {
     entity_draw(&game.entities[i]);
   }
   game_camera_post_update(&game.game_camera);
+  entity_system_update();
+
+  for (int i = 0 ; i < game.cache.music_num ; i++) {
+    binocle_audio_music *music = &game.cache.music[i];
+    binocle_audio_update_music_stream(music);
+  }
 
   kmMat4 view_matrix;
   kmMat4Identity(&view_matrix);
   // Gets the viewport calculated by the adapter
-  kmAABB2 screen_viewport = binocle_viewport_adapter_get_viewport(*adapter);
+  kmAABB2 screen_viewport = binocle_viewport_adapter_get_viewport(*game.gfx.camera.viewport_adapter);
   //binocle_sprite_draw(font_sprite, &gd, (uint64_t)font_sprite_pos.x, (uint64_t)font_sprite_pos.y, adapter.viewport);
 
 
@@ -191,12 +198,12 @@ int main(int argc, char *argv[]) {
   binocle_data_dir = binocle_sdl_assets_dir();
   binocle_log_info("Current base path: %s", binocle_data_dir);
 
-  window = binocle_window_new(DESIGN_WIDTH, DESIGN_HEIGHT, "Binocle Sprite Batch");
+  window = binocle_window_new(DESIGN_WIDTH * SCALE, DESIGN_HEIGHT * SCALE, "Binocle Game Template");
   binocle_window_set_background_color(window, binocle_color_azure());
   binocle_window_set_minimum_size(window, DESIGN_WIDTH, DESIGN_HEIGHT);
-  adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING,
-                                         BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window->original_width,
-                                         window->original_height, window->original_width, window->original_height);
+  binocle_viewport_adapter *adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING,
+                                         BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, DESIGN_WIDTH,
+                                         DESIGN_HEIGHT, DESIGN_WIDTH, DESIGN_HEIGHT);
   game.gfx.camera = binocle_camera_new(adapter);
   game.input = binocle_input_new();
   game.gfx.gd = binocle_gd_new();
@@ -318,6 +325,13 @@ int main(int argc, char *argv[]) {
   game.gfx.sprite_batch.gd = &game.gfx.gd;
 
   binocle_gd_setup_default_pipeline(&game.gfx.gd, DESIGN_WIDTH, DESIGN_HEIGHT, game.gfx.default_shader, screen_shader);
+  binocle_gd_setup_flat_pipeline(&game.gfx.gd);
+
+  game.audio = binocle_audio_new();
+  binocle_audio_init(&game.audio);
+  binocle_audio_music theme = cache_load_music("/assets/music/theme.mp3");
+  binocle_audio_play_music_stream(&theme);
+  binocle_audio_set_music_volume(&theme, 0.7f);
 
   game.level = (level_t) {0};
   level_load_tilemap(&game.level, "maps/map01.json");

@@ -6,6 +6,7 @@
 #include "l_point.h"
 #include "entity.h"
 #include "level.h"
+#include "cooldown.h"
 
 extern struct game_t game;
 
@@ -28,9 +29,11 @@ game_camera_t game_camera_new() {
     .tracking_speed = 1.0f,
     .brake_dist_near_bounds = 0.1f,
     .shake_power = 1.0f,
+    .elapsed_time = 0,
   };
   l_point_set_level_case(&res.raw_focus, 0, 0, 0.5f, 0.5f);
   l_point_set_level_case(&res.clamped_focus, 0, 0, 0.5f, 0.5f);
+  cooldown_system_init(&res.pools, 16);
   return res;
 }
 
@@ -110,15 +113,15 @@ void game_camera_apply(game_camera_t *gc) {
   float cam_x = floorf(l_point_get_level_x(&gc->clamped_focus) - (float) game_camera_get_px_wid(gc) * 0.5f);
   float cam_y = floorf(l_point_get_level_y(&gc->clamped_focus) - (float) game_camera_get_px_hei(gc) * 0.5f);
 
-//  if (game_camera_has_cooldown(gc, "shaking")) {
-//    cam_x += cosf(gc->elapsed_time * 1.1f) * 2.5f * gc->shake_power * game_camera_get_cooldown_ratio(gc, "shaking");
-//    cam_y += sinf(0.3f + gc->elapsed_time * 1.7f) * 2.5f * gc->shake_power * game_camera_get_cooldown_ratio(gc, "shaking");
-//  }
+  if (cooldown_has(&gc->pools, "shaking")) {
+    cam_x += cosf(gc->elapsed_time * 1.1f) * 2.5f * gc->shake_power * cooldown_get_ratio(&gc->pools, "shaking");
+    cam_y += sinf(0.3f + gc->elapsed_time * 1.7f) * 2.5f * gc->shake_power * cooldown_get_ratio(&gc->pools, "shaking");
+  }
 
   binocle_camera_set_position(&game.gfx.camera, cam_x, cam_y);
 }
 
-void game_camera_update(game_camera_t *gc) {
+void game_camera_update(game_camera_t *gc, float dt) {
   // target tracking
   if (gc->target != 0) {
     float spd_x = 0.015f * gc->tracking_speed * gc->zoom;
@@ -195,8 +198,15 @@ void game_camera_update(game_camera_t *gc) {
     l_point_set_level_x(&gc->clamped_focus, l_point_get_level_x(&gc->raw_focus));
     l_point_set_level_y(&gc->clamped_focus, l_point_get_level_y(&gc->raw_focus));
   }
+
+  cooldown_system_update(&gc->pools, dt);
 }
 
 void game_camera_post_update(game_camera_t *gc) {
   game_camera_apply(gc);
+}
+
+void game_camera_shake(game_camera_t *gc, float duration, float power) {
+  cooldown_set(&gc->pools, "shaking", duration, NULL);
+  gc->shake_power = power;
 }

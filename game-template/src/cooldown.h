@@ -16,5 +16,6 @@ void cooldown_set(pools_t *pools, const char *name, float duration_seconds, void
 void cooldown_unset(pools_t *pools, const char *name);
 bool cooldown_has(pools_t *pools, const char *name);
 float cooldown_get(pools_t *pools, const char *name);
+float cooldown_get_ratio(pools_t *pools, const char *name);
 
 #endif //GAME_TEMPLATE_COOLDOWN_H

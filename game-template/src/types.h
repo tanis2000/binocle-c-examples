@@ -13,6 +13,7 @@
 #include "binocle_gd.h"
 #include "cute_tiled.h"
 #include "binocle_input.h"
+#include "binocle_audio.h"
 
 // TODO: particles
 // TODO: entities
@@ -27,6 +28,8 @@
 #define DESIGN_WIDTH (320)
 #define DESIGN_HEIGHT (240)
 #define MAX_CACHED_IMAGES (256)
+#define MAX_CACHED_MUSIC (16)
+#define MAX_CACHED_SOUNDS (256)
 #define MAX_ENTITIES (65535)
 
 /// The handle of a cooldown
@@ -44,20 +47,24 @@ typedef struct cooldown_t {
   bool active;
 } cooldown_t;
 
-typedef struct entity_handle_t {
-  int id;
-} entity_handle_t;
-
 typedef struct animation_frame_t {
   int *frames;
   int frames_count;
   float period;
   bool loop;
+  void (*on_finish)(struct entity_t *e);
 } animation_frame_t;
+
+/// Container for all the arrays (pools) of managed objects
+typedef struct pools_t {
+  binocle_pool_t cooldown_pool;
+  cooldown_t *cooldowns;
+} pools_t;
 
 typedef struct entity_t {
   bool in_use;
   struct entity_t *parent;
+  struct entity_t *owner;
   int32_t cx;
   int32_t cy;
   float xr;
@@ -108,6 +115,8 @@ typedef struct entity_t {
   bool has_collisions;
   char *name;
 
+  pools_t pools;
+
   void (*on_pre_step_x)(struct entity_t *e, struct level_t *level);
 
   void (*on_pre_step_y)(struct entity_t *e, struct level_t *level);
@@ -116,28 +125,44 @@ typedef struct entity_t {
 
   void (*on_touch_wall)(struct entity_t *e, int32_t direction);
 
+  void (*on_pre_update)(struct entity_t *e, float dt);
+
+  void (*on_update)(struct entity_t *e, float dt);
+
+  bool (*on_is_alive)(struct entity_t *e);
+
+  void (*on_damage_taken)(struct entity_t *e, int32_t amount, int32_t direction);
+
   // Game specific data
   float speed_x;
   float speed_y;
+  float ang;
 } entity_t;
-
-/// Container for all the arrays (pools) of managed objects
-typedef struct pools_t {
-  binocle_pool_t cooldown_pool;
-  cooldown_t *cooldowns;
-
-  binocle_pool_t entity_pool;
-  entity_t *entities;
-} pools_t;
 
 typedef struct cached_image_t {
   sg_image img;
   const char *filename;
 } cached_image_t;
 
+typedef struct cached_music_t {
+  binocle_audio_music music;
+  const char *filename;
+} cached_music_t;
+
+typedef struct cached_sound_t {
+  binocle_audio_sound sound;
+  const char *filename;
+} cached_sound_t;
+
 typedef struct cache_t {
   cached_image_t images[MAX_CACHED_IMAGES];
   size_t images_num;
+
+  cached_music_t music[MAX_CACHED_MUSIC];
+  size_t music_num;
+
+  cached_sound_t sounds[MAX_CACHED_SOUNDS];
+  size_t sound_num;
 } cache_t;
 
 typedef struct tile_t {
@@ -195,12 +220,16 @@ typedef struct game_camera_t {
   float tracking_speed;
   float brake_dist_near_bounds;
   float shake_power;
+  float elapsed_time;
+
+  pools_t pools;
 } game_camera_t;
 
 /// The main game state
 typedef struct game_t {
   pools_t pools;
   float dt;
+  float elapsed_time;
   cache_t cache;
   bool debug_enabled;
   binocle_input input;
@@ -220,6 +249,7 @@ typedef struct game_t {
     binocle_sprite_batch sprite_batch;
     sg_shader default_shader;
   } gfx;
+  binocle_audio audio;
 } game_t;
 
 typedef enum LAYERS {
@@ -232,79 +262,16 @@ typedef enum LAYERS {
   LAYER_TEXT = 7
 } LAYERS;
 
-typedef struct hero_t {
-  entity_handle_t handle;
-  int32_t max_health;
-  int32_t health;
-} hero_t;
-
-typedef struct health_t {
-  int32_t max_health;
-  int32_t health;
-  bool destroyed;
-} health_t;
-
-
-typedef struct graphics_t {
-  binocle_sprite *sprite;
-  binocle_subtexture *frames;
-  animation_frame_t *animations;
-  animation_frame_t *animation;
-  float animation_timer;
-  int animation_frame;
-  int frame;
-
-  int32_t sprite_x;
-  int32_t sprite_y;
-  float sprite_scale_x;
-  float sprite_scale_y;
-  float sprite_scale_set_x;
-  float sprite_scale_set_y;
-  bool visible;
-  float depth;
-
-  float pivot_x;
-  float pivot_y;
-} graphics_t;
-
-typedef struct physics_t {
-  int32_t cx;
-  int32_t cy;
-  float xr;
-  float yr;
-
-  float dx;
-  float dy;
-  float bdx;
-  float bdy;
-
-  float gravity;
-
-  float frict;
-  float bump_frict;
-
-  int32_t dir;
-  float time_mul;
-} physics_t;
-
-typedef struct collider_t {
-  float hei;
-  float wid;
-  float radius;
-  bool has_collisions;
-} collider_t;
-
-typedef struct profile_t {
-  char *name;
-} profile_t;
-
-typedef struct node_t {
-  entity_t *parent;
-} node_t;
-
-
 typedef enum ANIMATION_ID {
+  ANIMATION_ID_FX_MAIN = 0,
+
   ANIMATION_ID_HERO_IDLE1 = 0,
+  ANIMATION_ID_HERO_IDLE2 = 1,
+  ANIMATION_ID_HERO_RUN = 2,
+  ANIMATION_ID_HERO_JUMP_UP = 3,
+  ANIMATION_ID_HERO_JUMP_DOWN = 4,
+  ANIMATION_ID_HERO_SHOOT = 5,
+  ANIMATION_ID_HERO_DEATH = 6,
 } ANIMATION_ID;
 
 

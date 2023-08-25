@@ -11,6 +11,7 @@
 #include "cache.h"
 #include "level.h"
 #include "stb_ds.h"
+#include "cooldown.h"
 
 extern struct game_t game;
 extern struct entity_t entities[MAX_ENTITIES];
@@ -20,7 +21,17 @@ void entity_system_init() {
   game.entities = entities;
 }
 
+void entity_system_update() {
+  for (int i = 0 ; i < game.num_entities ; i++) {
+    entity_t *e = &game.entities[i];
+    if (e->destroyed) {
+      entity_free(e);
+    }
+  }
+}
+
 static void entity_init(entity_t *en) {
+  en->in_use = true;
   en->cx = 0;
   en->cy = 0;
   en->xr = 0.5f;
@@ -66,6 +77,8 @@ static void entity_init(entity_t *en) {
   en->name = SDL_strdup("entity");
 
   en->parent = NULL;
+
+  cooldown_system_init(&en->pools, 16);
 }
 
 entity_t *entity_spawn() {
@@ -95,6 +108,7 @@ entity_t *entity_spawn() {
 }
 
 void entity_free(entity_t *e) {
+  cooldown_system_shutdown(&e->pools);
   memset(e, 0, sizeof(*e));
   e->name = "freed";
 }
@@ -111,6 +125,9 @@ void entity_draw(entity_t *e) {
 }
 
 void entity_update(entity_t *e, float dt) {
+  if (e->on_pre_update != NULL) {
+    e->on_pre_update(e, dt);
+  }
   level_t *level = &game.level;
 
   // X
@@ -175,7 +192,12 @@ void entity_update(entity_t *e, float dt) {
   if (fabsf(e->bdy) <= 0.0005f * e->time_mul) {
     e->bdy = 0;
   }
-//    entity_update_animation(handle, dt);
+  entity_update_animation(e, dt);
+  if (e->on_update != NULL) {
+    e->on_update(e, dt);
+  }
+
+  cooldown_system_update(&e->pools, dt);
 }
 
 void entity_post_update(entity_t *e, float dt) {
@@ -183,8 +205,6 @@ void entity_post_update(entity_t *e, float dt) {
     return;
   }
 
-  entity_play_animation(e, ANIMATION_ID_HERO_IDLE1, true);
-  entity_update_animation(e, dt);
   e->sprite_x = (e->cx + e->xr) * GRID;
   e->sprite_y = (e->cy + e->yr) * GRID;
   e->sprite_scale_x = e->dir * e->sprite_scale_set_x;
@@ -351,7 +371,11 @@ void entity_draw_debug(physics_t *physics, graphics_t *graphics, collider_t *col
 */
 
 bool entity_is_alive(entity_t *e) {
-  return e->health > 0;
+  if (e->on_is_alive != NULL) {
+    return e->on_is_alive(e);
+  } else {
+    return !e->destroyed;
+  }
 }
 
 //void entity_add_animation(graphics_t *graphics, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop) {
@@ -359,12 +383,13 @@ bool entity_is_alive(entity_t *e) {
 //  binocle_sprite_add_animation_with_frames(graphics->sprite, id, loop, delay, frames, frames_count);
 //}
 
-void entity_add_animation(entity_t *e, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop) {
+void entity_add_animation(entity_t *e, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop, void (*on_finish)(struct entity_t *e)) {
   animation_frame_t af = {
     .frames = NULL,
     .frames_count = frames_count,
     .period = 1.0f / fabsf(period),
     .loop = loop,
+    .on_finish = on_finish,
   };
   for (int i = 0; i < frames_count; i++) {
       arrput(af.frames, frames[i]);
@@ -400,6 +425,10 @@ void entity_update_animation(entity_t *e, float dt) {
         e->animation_frame = 0;
       } else {
         entity_stop_animation(e);
+
+        if (anim->on_finish != NULL) {
+          anim->on_finish(e);
+        }
         return;
       }
     }
@@ -408,4 +437,15 @@ void entity_update_animation(entity_t *e, float dt) {
     e->frame = anim->frames[e->animation_frame];
     SDL_memcpy(&e->sprite->subtexture, &e->frames[e->frame], sizeof(binocle_subtexture));
   }
+}
+
+float entity_dir_to_ang(entity_t *e) {
+  if (e->dir == 1) {
+    return 0;
+  }
+  return M_PI;
+}
+
+void entity_kill(entity_t *e) {
+  e->destroyed = true;
 }

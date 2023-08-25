@@ -9,12 +9,14 @@
 
 game_camera_t game_camera_new();
 
-void game_camera_update(game_camera_t *gc);
+void game_camera_update(game_camera_t *gc, float dt);
 
 void game_camera_post_update(game_camera_t *gc);
 
 void game_camera_track_entity(game_camera_t *gc, entity_t *e, bool immediate, float speed);
 
 void game_camera_center_on_target(game_camera_t *gc);
+
+void game_camera_shake(game_camera_t *gc, float duration, float power);
 
 #endif //GAME_TEMPLATE_GAME_CAMERA_H
