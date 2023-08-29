@@ -14,6 +14,7 @@
 #include "cute_tiled.h"
 #include "binocle_input.h"
 #include "binocle_audio.h"
+#include "gui/gui.h"
 
 // TODO: particles
 // TODO: entities
@@ -31,6 +32,9 @@
 #define MAX_CACHED_MUSIC (16)
 #define MAX_CACHED_SOUNDS (256)
 #define MAX_ENTITIES (65535)
+
+struct entity_t;
+struct level_t;
 
 /// The handle of a cooldown
 typedef struct cooldown_handle_t {
@@ -227,6 +231,7 @@ typedef struct game_camera_t {
 
 /// The main game state
 typedef struct game_t {
+  bool debug;
   pools_t pools;
   float dt;
   float elapsed_time;
@@ -248,8 +253,15 @@ typedef struct game_t {
     binocle_ttfont default_font;
     binocle_sprite_batch sprite_batch;
     sg_shader default_shader;
+    struct binocle_window *window;
   } gfx;
   binocle_audio audio;
+  struct {
+    gui_handle_t debug_gui_handle;
+    struct gui_t *debug_gui;
+    gui_handle_t game_gui_handle;
+    struct gui_t *game_gui;
+  } gui;
 } game_t;
 
 typedef enum LAYERS {

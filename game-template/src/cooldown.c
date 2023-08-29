@@ -5,7 +5,6 @@
 #include <stddef.h>
 #include <assert.h>
 #include "cooldown.h"
-#include "binocle_sdl.h"
 #include "binocle_log.h"
 
 void cooldown_system_init(pools_t *pools, size_t pool_size) {

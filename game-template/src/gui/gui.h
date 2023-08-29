@@ -35,6 +35,9 @@ void gui_recreate_imgui_render_target(gui_handle_t handle, int width, int height
 void gui_set_viewport(gui_handle_t handle, int width, int height);
 void gui_set_viewport_adapter(gui_handle_t handle, struct binocle_viewport_adapter *viewport_adapter);
 void gui_set_apply_scissor(gui_handle_t handle, bool value);
+void gui_set_context(struct gui_t *gui);
+void gui_wrap_new_frame(struct binocle_window *window, float dt, int w, int h, int display_w, int display_h);
+void gui_wrap_render_frame(struct gui_t *gui);
 int l_gui_wrap_new_frame(struct lua_State *L);
 int l_gui_wrap_render_frame(struct lua_State *L);
 int l_gui_wrap_render_to_screen(struct lua_State *L);

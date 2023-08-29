@@ -17,7 +17,7 @@
 #include "binocle_camera.h"
 #include "binocle_viewport_adapter.h"
 #include "binocle_log.h"
-#include "binocle_array.h"
+#include "stb_ds.h"
 
 #define MAX_LOG_ENTRIES 4096
 #define max_ui_vertices (1 << 16)
@@ -125,17 +125,17 @@ void set_clipboard_text(void *caller, const char * text) {
 
 void gui_resources_setup() {
   gui_resources = (gui_resources_t){ 0 };
-  binocle_array_set_capacity(gui_resources.guis_array, 0);
+  gui_resources.guis_array = NULL;
 }
 
 gui_handle_t gui_resources_create_gui(const char *name) {
   gui_handle_t handle = {.id=-1};
   gui_t gui = {0};
   gui.name = SDL_strdup(name);
-  gui_t *res = binocle_array_push(gui_resources.guis_array, gui);
-  for (int i = 0 ; i < binocle_array_size(gui_resources.guis_array) ; i++) {
+  arrput(gui_resources.guis_array, gui);
+  for (int i = 0 ; i < arrlen(gui_resources.guis_array) ; i++) {
     gui_t *g = &gui_resources.guis_array[i];
-    if (g == res) {
+    if (SDL_strcmp(g->name, gui.name) == 0) {
       handle.id = i;
       return handle;
     }
@@ -148,7 +148,7 @@ gui_t *gui_resources_get_gui_with_handle(gui_handle_t handle) {
 }
 
 gui_t *gui_resources_get_gui(const char *name) {
-  for (int i = 0 ; i < binocle_array_size(gui_resources.guis_array) ; i++) {
+  for (int i = 0 ; i < arrlen(gui_resources.guis_array) ; i++) {
     gui_t *gui = &gui_resources.guis_array[i];
     if (SDL_strcmp(gui->name, name) == 0) {
       return gui;
