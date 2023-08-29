@@ -49,6 +49,8 @@
 #include "stb_ds.h"
 #include "gui/gui.h"
 #include "gui/debug_gui.h"
+#include "scenes/intro.h"
+#include "scene.h"
 
 #if defined(BINOCLE_MACOS) && defined(BINOCLE_METAL)
 #include "../assets/metal/default-metal-macosx.h"
@@ -88,6 +90,7 @@ kmVec2 font_sprite_pos;
 sg_shader screen_shader;
 
 entity_t entities[MAX_ENTITIES];
+scene_t scenes[MAX_SCENES];
 game_t game;
 
 void create_entity() {
@@ -152,6 +155,8 @@ void main_loop() {
                              BINOCLE_SPRITE_SORT_MODE_DEFERRED, &game.gfx.default_shader,
                              binocle_camera_get_transform_matrix(&game.gfx.camera));
 
+  scene_pre_update(game.scene, dt);
+  scene_update(game.scene, dt);
   kmVec2 scale;
   scale.x = 1.0f;
   scale.y = 1.0f;
@@ -205,14 +210,16 @@ void main_loop() {
 //  gui_set_context(gui);
 //  gui_render_to_screen(gui, &game.gfx.gd, game.gfx.window, DESIGN_WIDTH, DESIGN_HEIGHT, screen_viewport, game.gfx.camera.viewport_adapter->scale_matrix, game.gfx.camera.viewport_adapter->inverse_multiplier);
 
+  scene_post_update(game.scene, dt);
+
   binocle_window_refresh(game.gfx.window);
   binocle_window_end_frame(game.gfx.window);
-  //binocle_log_info("FPS: %d", binocle_window_get_fps(&window));
 }
 
 int main(int argc, char *argv[]) {
   game = (game_t) {0};
   entity_system_init();
+  scene_system_init();
 
   binocle_app_desc_t app_desc = {0};
   app = binocle_app_new();
@@ -376,6 +383,8 @@ int main(int argc, char *argv[]) {
   create_entity();
   entity_set_pos_grid(game.hero, hs->cx + 10, hs->cy);
   create_game_camera();
+
+  game.scene = intro_new();
 
 #ifdef __EMSCRIPTEN__
   emscripten_set_main_loop(main_loop, 0, 1);

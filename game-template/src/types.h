@@ -14,6 +14,7 @@
 #include "cute_tiled.h"
 #include "binocle_input.h"
 #include "binocle_audio.h"
+#include "backend/binocle_material.h"
 #include "gui/gui.h"
 
 // TODO: particles
@@ -32,9 +33,12 @@
 #define MAX_CACHED_MUSIC (16)
 #define MAX_CACHED_SOUNDS (256)
 #define MAX_ENTITIES (65535)
+#define MAX_SCENES (16)
+#define MAX_CHILDREN_SCENES (4)
 
 struct entity_t;
 struct level_t;
+struct scene_t;
 
 /// The handle of a cooldown
 typedef struct cooldown_handle_t {
@@ -229,6 +233,21 @@ typedef struct game_camera_t {
   pools_t pools;
 } game_camera_t;
 
+typedef struct scene_t {
+  bool in_use;
+  char *name;
+  int id;
+  struct scene_t *parent;
+  struct scene_t *children[MAX_CHILDREN_SCENES];
+  int num_children;
+  bool paused;
+  pools_t pools;
+  float elapsed_time;
+  bool destroyed;
+  void *data;
+  void (*on_update)(struct scene_t *s, float dt);
+} scene_t;
+
 /// The main game state
 typedef struct game_t {
   bool debug;
@@ -238,9 +257,15 @@ typedef struct game_t {
   cache_t cache;
   bool debug_enabled;
   binocle_input input;
-  //entity_t entities[MAX_ENTITIES];
+
   entity_t *entities;
   int num_entities;
+
+  scene_t *scenes;
+  int num_scenes;
+
+  scene_t *scene;
+
   /// The level entity
   level_t level;
   /// The hero entity
@@ -286,5 +311,15 @@ typedef enum ANIMATION_ID {
   ANIMATION_ID_HERO_DEATH = 6,
 } ANIMATION_ID;
 
+typedef struct intro_scene_t {
+  int tex_width;
+  int tex_height;
+  int tanis_tex_width;
+  int tanis_tex_height;
+  sg_image img;
+  sg_image tanis_img;
+  binocle_material *mat;
+  binocle_sprite *logo;
+} intro_scene_t;
 
 #endif //GAME_TEMPLATE_TYPES_H
