@@ -246,6 +246,8 @@ typedef struct scene_t {
   bool destroyed;
   void *data;
   void (*on_update)(struct scene_t *s, float dt);
+  void (*on_pre_update)(struct scene_t *s, float dt);
+  void (*on_post_update)(struct scene_t *s, float dt);
 } scene_t;
 
 /// The main game state
@@ -275,7 +277,7 @@ typedef struct game_t {
   struct {
     binocle_gd gd;
     binocle_camera camera;
-    binocle_ttfont default_font;
+    binocle_ttfont *default_font;
     binocle_sprite_batch sprite_batch;
     sg_shader default_shader;
     struct binocle_window *window;
@@ -321,5 +323,9 @@ typedef struct intro_scene_t {
   binocle_material *mat;
   binocle_sprite *logo;
 } intro_scene_t;
+
+typedef struct game_scene_t {
+
+} game_scene_t;
 
 #endif //GAME_TEMPLATE_TYPES_H

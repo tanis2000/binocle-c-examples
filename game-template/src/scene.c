@@ -94,6 +94,9 @@ void scene_pre_update(scene_t *s, float dt) {
   s->elapsed_time += dt;
   if (scene_can_run(s) && !s->destroyed) {
     cooldown_system_update(&s->pools, dt);
+    if (s->on_pre_update != NULL) {
+      s->on_pre_update(s, dt);
+    }
     for (int i = 0 ; i < s->num_children ; i++) {
       scene_t *child = s->children[i];
       if (child != NULL) {
@@ -119,6 +122,9 @@ void scene_update(scene_t *s, float dt) {
 
 void scene_post_update(scene_t *s, float dt) {
   if (scene_can_run(s) && !s->destroyed) {
+    if (s->on_post_update != NULL) {
+      s->on_post_update(s, dt);
+    }
     for (int i = 0; i < s->num_children; i++) {
       scene_t *child = s->children[i];
       if (child != NULL) {

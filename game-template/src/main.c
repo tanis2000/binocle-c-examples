@@ -93,16 +93,6 @@ entity_t entities[MAX_ENTITIES];
 scene_t scenes[MAX_SCENES];
 game_t game;
 
-void create_entity() {
-  game.hero = hero_new();
-}
-
-void create_game_camera() {
-  game.game_camera = game_camera_new();
-  game_camera_track_entity(&game.game_camera, game.hero, false, 1.0f);
-  game_camera_center_on_target(&game.game_camera);
-}
-
 void main_loop() {
   binocle_window_begin_frame(game.gfx.window);
   float dt = (float) binocle_window_get_frame_time(game.gfx.window) / 1000.0f;
@@ -127,13 +117,6 @@ void main_loop() {
 
   if (binocle_input_is_key_down(game.input, KEY_1)) {
     game.debug = !game.debug;
-  }
-
-  if (binocle_input_is_key_down(game.input, KEY_2)) {
-    binocle_audio_music *music = &game.cache.music[0].music;
-    //binocle_audio_stop_music_stream(music);
-    binocle_audio_seek_music_stream(music, 0);
-    //binocle_audio_play_music_stream(music);
   }
 
 
@@ -161,21 +144,7 @@ void main_loop() {
   scale.x = 1.0f;
   scale.y = 1.0f;
 
-  for (int i = 0; i < game.num_entities; i++) {
-    entity_update(&game.entities[i], dt);
-  }
-  hero_input_update(game.hero, dt);
-  for (int i = 0; i < game.num_entities; i++) {
-    entity_post_update(&game.entities[i], dt);
-  }
-  game_camera_update(&game.game_camera, dt);
-  level_render(&game.level);
-  for (int i = 0; i < game.num_entities; i++) {
-    entity_draw(&game.entities[i]);
-  }
-  game_camera_post_update(&game.game_camera);
   debug_gui_draw(dt);
-  entity_system_update();
 
   for (int i = 0 ; i < game.cache.music_num ; i++) {
     binocle_audio_music *music = &game.cache.music[i].music;
@@ -351,6 +320,18 @@ int main(int argc, char *argv[]) {
   font_sprite_pos.x = 0;
   font_sprite_pos.y = -256;
 
+  binocle_ttfont_load_desc desc = {
+    .filename = "/assets/font/default.ttf",
+    .shader = game.gfx.default_shader,
+    .fs = BINOCLE_FS_PHYSFS,
+    .texture_width = 1024,
+    .texture_height = 1024,
+    .size = 8,
+    .filter = SG_FILTER_LINEAR,
+    .wrap = SG_WRAP_CLAMP_TO_EDGE,
+  };
+  game.gfx.default_font = binocle_ttfont_load_with_desc(&desc);
+
   game.gfx.sprite_batch = binocle_sprite_batch_new();
   game.gfx.sprite_batch.gd = &game.gfx.gd;
 
@@ -374,15 +355,7 @@ int main(int argc, char *argv[]) {
   binocle_audio_play_music_stream(&theme);
   binocle_audio_set_music_volume(&theme, 0);
 
-  game.level = (level_t) {0};
-  level_load_tilemap(&game.level, "maps/map01.json");
-
   cooldown_system_init(&game.pools, 16);
-
-  spawner_t *hs = level_get_hero_spawner(&game.level);
-  create_entity();
-  entity_set_pos_grid(game.hero, hs->cx + 10, hs->cy);
-  create_game_camera();
 
   game.scene = intro_new();
 

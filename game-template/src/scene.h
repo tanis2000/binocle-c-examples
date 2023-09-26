@@ -13,4 +13,6 @@ void scene_free(scene_t *e);
 void scene_pre_update(scene_t *s, float dt);
 void scene_update(scene_t *s, float dt);
 void scene_post_update(scene_t *s, float dt);
+void scene_pause(scene_t *s);
+void scene_resume(scene_t *s);
 #endif //GAME_TEMPLATE_SCENE_H
