@@ -1,6 +1,6 @@
 project(pbr)
 
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.1)
 
 # Policies
 if("${CMAKE_VERSION}" VERSION_GREATER 3.1)
@@ -9,7 +9,7 @@ if("${CMAKE_VERSION}" VERSION_GREATER 3.1)
 endif()
 
 # cmake modules directory
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/../binocle-c/build/cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/../binocle-c/cmake")
 
 # Enables CMake database for YCM
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
@@ -55,6 +55,11 @@ elseif(EMSCRIPTEN)
 	message("Including Emscripten defines")
 	include(BinocleWeb)
 endif()
+
+if (NOT BINOCLE_DATA_DIR)
+    message("Setting BINOCLE_DATA_DIR to the default value")
+    set(BINOCLE_DATA_DIR "${CMAKE_SOURCE_DIR}/assets/")
+endif ()
 
 message("Project source dir: ${PROJECT_SOURCE_DIR}")
 
@@ -113,10 +118,16 @@ endforeach()
 if (APPLE)
     #if(IOS)
     set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-    file(GLOB RESOURCES_LIST ${CMAKE_SOURCE_DIR}/assets/*)
-    set(RESOURCES
-            ${RESOURCES_LIST}
-            )
+    file(GLOB_RECURSE RESOURCES "${CMAKE_SOURCE_DIR}/assets/*")
+    foreach(RES_FILE ${RESOURCES})
+        message("RES_FILE: ${RES_FILE}")
+        file(RELATIVE_PATH RES_PATH "${CMAKE_SOURCE_DIR}/assets" ${RES_FILE})
+        message("RES_PATH: ${RES_PATH}")
+        get_filename_component(RES_FOLDER ${RES_PATH} DIRECTORY)
+        message("RES_FOLDER: ${RES_FOLDER}")
+        set_property(SOURCE ${RES_FILE} PROPERTY MACOSX_PACKAGE_LOCATION "Resources/${RES_FOLDER}")
+    endforeach(RES_FILE)
+    #set_property(SOURCE ${RESOURCES} PROPERTY MACOSX_PACKAGE_LOCATION "Resources")
     message("Resources list: ${RESOURCES}")
     #endif()
 endif ()
@@ -196,6 +207,19 @@ endif ()
 if (MSVC)
     set(EXE_TYPE WIN32)
     #    set (SOURCE_FILES ${SOURCE_FILES} ${CMAKE_SOURCE_DIR}/build/cmake/Binocle.rc)
+    set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+    file(GLOB_RECURSE RESOURCES "${BINOCLE_DATA_DIR}*")
+    foreach(RES_FILE ${RESOURCES})
+        message("RES_FILE: ${RES_FILE}")
+        file(RELATIVE_PATH RES_PATH "${BINOCLE_DATA_DIR}" ${RES_FILE})
+        message("RES_PATH: ${RES_PATH}")
+        get_filename_component(RES_FOLDER ${RES_PATH} DIRECTORY)
+        message("RES_FOLDER: ${RES_FOLDER}")
+        add_custom_command(TARGET ${PROJECT_NAME}
+                POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy ${RES_FILE} ${CMAKE_CURRENT_BINARY_DIR}/src/assets/${RES_PATH}
+        )
+    endforeach(RES_FILE)
 elseif (APPLE)
     #ICNS
     set(MACOSX_BUNDLE_ICON_FILE ${PROJECT_NAME}.icns)

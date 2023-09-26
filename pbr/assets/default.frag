@@ -1,4 +1,4 @@
-#version 120
+#version 330
 
 //#define WITH_NORMALMAP_GREEN_UP 1
 //#define WITH_NORMALMAP_UNSIGNED 1
@@ -49,16 +49,18 @@ struct SpotLight {
 
 #define NR_POINT_LIGHTS 4
 
-varying vec3 position;
-varying vec4 color;
-varying vec2 tcoord;
-varying vec3 normal;
+in vec3 position;
+in vec4 color;
+in vec2 tcoord;
+in vec3 normal;
 
 uniform vec3 viewPos;
 uniform DirLight dirLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform SpotLight spotLight;
 uniform Material material;
+
+out vec4 fragColor;
 
 const float PI = 3.14159265359;
 
@@ -75,10 +77,10 @@ vec3 getNormalFromMap3();
 
 void main(void) {
     // properties
-    vec3 albedo     = pow(texture2D(material.albedoMap, tcoord).rgb, vec3(2.2));
-    float metallic  = texture2D(material.metallicMap, tcoord).r;
-    float roughness = texture2D(material.roughnessMap, tcoord).r;
-    float ao        = texture2D(material.aoMap, tcoord).r;
+    vec3 albedo     = pow(texture(material.albedoMap, tcoord).rgb, vec3(2.2));
+    float metallic  = texture(material.metallicMap, tcoord).r;
+    float roughness = texture(material.roughnessMap, tcoord).r;
+    float ao        = texture(material.aoMap, tcoord).r;
 
     vec3 N = getNormalFromMap();
     //vec3 N = getNormalFromMap2();
@@ -137,7 +139,7 @@ void main(void) {
     // gamma correct
     color = pow(color, vec3(1.0/2.2));
 
-    gl_FragColor = vec4(color, 1.0);
+    fragColor = vec4(color, 1.0);
 
 }
 
@@ -160,7 +162,7 @@ mat3 cotangent_frame( vec3 N, vec3 p, vec2 uv ) {
 vec3 perturb_normal( vec3 N, vec3 V, vec2 texcoord ) {
     // assume N, the interpolated vertex normal and
     // V, the view vector (vertex to eye)
-    vec3 map = texture2D( material.normalMap, texcoord ).xyz;
+    vec3 map = texture( material.normalMap, texcoord ).xyz;
 #ifdef WITH_NORMALMAP_UNSIGNED
     map = map * 255./127. - 128./127.;
 #endif
@@ -194,7 +196,7 @@ vec3 getNormalFromMap3() {
 // technique somewhere later in the normal mapping tutorial.
 vec3 getNormalFromMap()
 {
-    vec3 tangentNormal = texture2D(material.normalMap, tcoord).xyz * 2.0 - 1.0;
+    vec3 tangentNormal = texture(material.normalMap, tcoord).xyz * 2.0 - 1.0;
 
     vec3 Q1  = dFdx(position);
     vec3 Q2  = dFdy(position);

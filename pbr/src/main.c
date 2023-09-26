@@ -8,7 +8,6 @@
 #include "emscripten.h"
 #endif
 #include "binocle_sdl.h"
-#include "backend/binocle_backend.h"
 #include "backend/binocle_color.h"
 #include "binocle_window.h"
 #include "binocle_game.h"
@@ -17,6 +16,7 @@
 #include <binocle_image.h>
 #include <binocle_sprite.h>
 #include <backend/binocle_material.h>
+#include <backend/binocle_color.h>
 #include <binocle_model.h>
 
 #define BINOCLE_MATH_IMPL
@@ -84,10 +84,12 @@ typedef struct shader_spot_light_t {
 typedef struct default_shader_fs_uniforms_t {
   float viewPos[3];
   shader_dir_light_t dirLight;
-  shader_point_light_t pointLight[4];
   shader_spot_light_t spotLight;
-//  shader_material_t material;
 } default_shader_fs_uniforms_t;
+
+typedef struct default_shader_fs_uniforms_point_t {
+  shader_point_light_t pointLight[2];
+} default_shader_fs_uniforms_point_t;
 
 typedef struct lamp_shader_uniforms_t {
   float projectionMatrix[16];
@@ -97,21 +99,23 @@ typedef struct lamp_shader_uniforms_t {
 
 typedef struct state_t {
   struct {
-    binocle_pass_action action;
-    binocle_pipeline pip;
-    binocle_bindings bind;
+    sg_pass_action action;
+    sg_pipeline pip;
+    sg_bindings bind;
     default_shader_vs_uniforms_t vs_uni;
     default_shader_fs_uniforms_t fs_uni;
-    binocle_buffer vbuf;
+    default_shader_fs_uniforms_point_t fs_point1_uni;
+    default_shader_fs_uniforms_point_t fs_point2_uni;
+    sg_buffer vbuf;
   } main;
   struct {
-    binocle_pass_action action;
-    binocle_pipeline pip;
-    binocle_bindings bind;
+    sg_pass_action action;
+    sg_pipeline pip;
+    sg_bindings bind;
     default_shader_vs_uniforms_t vs_uni;
     default_shader_fs_uniforms_t fs_uni;
-    binocle_buffer vbuf;
-    binocle_buffer ibuf;
+    sg_buffer vbuf;
+    sg_buffer ibuf;
   } lamp;
 } state_t;
 
@@ -119,15 +123,15 @@ binocle_window *window;
 binocle_input input;
 binocle_camera_3d camera;
 binocle_gd gd;
-binocle_shader shader;
-binocle_shader lamp_shader;
+sg_shader shader;
+sg_shader lamp_shader;
 char *binocle_data_dir = NULL;
 binocle_app app;
-binocle_image albedo_image;
-binocle_image normal_image;
-binocle_image metallic_image;
-binocle_image roughness_image;
-binocle_image ao_image;
+sg_image albedo_image;
+sg_image normal_image;
+sg_image metallic_image;
+sg_image roughness_image;
+sg_image ao_image;
 binocle_sprite sprite;
 binocle_model model;
 float elapsed_time = 0;
@@ -163,10 +167,10 @@ kmVec3 ray_end_position;
 
 void setup_default_pipeline() {
   // Clear screen action for the main scene
-  binocle_color off_clear_color = binocle_color_black();
-  binocle_pass_action action = {
+  sg_color off_clear_color = binocle_color_black();
+  sg_pass_action action = {
     .colors[0] = {
-      .action = BINOCLE_ACTION_CLEAR,
+      .action = SG_ACTION_CLEAR,
       .value = {
         .r = off_clear_color.r,
         .g = off_clear_color.g,
@@ -178,34 +182,34 @@ void setup_default_pipeline() {
   state.main.action = action;
 
   // Pipeline state object for the screen (default) pass
-  state.main.pip = binocle_backend_make_pipeline(&(binocle_pipeline_desc){
+  state.main.pip = sg_make_pipeline(&(sg_pipeline_desc){
     .layout = {
       .attrs = {
-        [0] = { .format = BINOCLE_VERTEXFORMAT_FLOAT3 }, // position
-        [1] = { .format = BINOCLE_VERTEXFORMAT_FLOAT4 }, // color
-        [2] = { .format = BINOCLE_VERTEXFORMAT_FLOAT2 }, // texture uv
-        [3] = { .format = BINOCLE_VERTEXFORMAT_FLOAT3 }, // normal
+        [0] = { .format = SG_VERTEXFORMAT_FLOAT3 }, // position
+        [1] = { .format = SG_VERTEXFORMAT_FLOAT4 }, // color
+        [2] = { .format = SG_VERTEXFORMAT_FLOAT2 }, // texture uv
+        [3] = { .format = SG_VERTEXFORMAT_FLOAT3 }, // normal
       }
     },
     .shader = shader,
-    .index_type = BINOCLE_INDEXTYPE_NONE,
+    .index_type = SG_INDEXTYPE_NONE,
     .colors = {
-      [0] = { .pixel_format = BINOCLE_PIXELFORMAT_RGBA8 },
+      [0] = { .pixel_format = SG_PIXELFORMAT_RGBA8 },
     },
-    .cull_mode = BINOCLE_CULLMODE_FRONT,
+    .cull_mode = SG_CULLMODE_FRONT,
     .depth = {
-      .compare = BINOCLE_COMPAREFUNC_ALWAYS,
+      .compare = SG_COMPAREFUNC_ALWAYS,
     }
   });
 
-  binocle_buffer_desc vbuf_desc = {
-    .type = BINOCLE_BUFFERTYPE_VERTEXBUFFER,
-    .usage = BINOCLE_USAGE_STREAM,
+  sg_buffer_desc vbuf_desc = {
+    .type = SG_BUFFERTYPE_VERTEXBUFFER,
+    .usage = SG_USAGE_STREAM,
     .size = sizeof(binocle_vpctn) * MAX_VERTICES,
   };
-  state.main.vbuf = binocle_backend_make_buffer(&vbuf_desc);
+  state.main.vbuf = sg_make_buffer(&vbuf_desc);
 
-  state.main.bind = (binocle_bindings){
+  state.main.bind = (sg_bindings){
     .vertex_buffers = {
       [0] = state.main.vbuf,
     },
@@ -214,10 +218,10 @@ void setup_default_pipeline() {
 
 void setup_lamp_pipeline() {
   // Clear screen action for the lamp scene
-  binocle_color off_clear_color = binocle_color_green();
-  binocle_pass_action action = {
+  sg_color off_clear_color = binocle_color_green();
+  sg_pass_action action = {
     .colors[0] = {
-      .action = BINOCLE_ACTION_CLEAR,
+      .action = SG_ACTION_CLEAR,
       .value = {
         .r = off_clear_color.r,
         .g = off_clear_color.g,
@@ -229,38 +233,38 @@ void setup_lamp_pipeline() {
   state.lamp.action = action;
 
   // Pipeline state object for the screen (default) pass
-  state.lamp.pip = binocle_backend_make_pipeline(&(binocle_pipeline_desc){
+  state.lamp.pip = sg_make_pipeline(&(sg_pipeline_desc){
     .layout = {
       .attrs = {
-        [0] = { .format = BINOCLE_VERTEXFORMAT_FLOAT3 }, // position
+        [0] = { .format = SG_VERTEXFORMAT_FLOAT3 }, // position
       }
     },
     .shader = lamp_shader,
-    .index_type = BINOCLE_INDEXTYPE_UINT32,
+    .index_type = SG_INDEXTYPE_UINT32,
     .colors = {
-      [0] = { .pixel_format = BINOCLE_PIXELFORMAT_RGBA8 },
+      [0] = { .pixel_format = SG_PIXELFORMAT_RGBA8 },
     },
-    .cull_mode = BINOCLE_CULLMODE_FRONT,
+    .cull_mode = SG_CULLMODE_FRONT,
     .depth = {
-      .compare = BINOCLE_COMPAREFUNC_ALWAYS,
+      .compare = SG_COMPAREFUNC_ALWAYS,
     }
   });
 
-  binocle_buffer_desc vbuf_desc = {
-    .type = BINOCLE_BUFFERTYPE_VERTEXBUFFER,
-    .usage = BINOCLE_USAGE_STREAM,
+  sg_buffer_desc vbuf_desc = {
+    .type = SG_BUFFERTYPE_VERTEXBUFFER,
+    .usage = SG_USAGE_STREAM,
     .size = sizeof(GLfloat) * 3 * MAX_VERTICES,
   };
-  state.lamp.vbuf = binocle_backend_make_buffer(&vbuf_desc);
+  state.lamp.vbuf = sg_make_buffer(&vbuf_desc);
 
-  binocle_buffer_desc ibuf_desc = {
-    .type = BINOCLE_BUFFERTYPE_INDEXBUFFER,
-    .usage = BINOCLE_USAGE_STREAM,
+  sg_buffer_desc ibuf_desc = {
+    .type = SG_BUFFERTYPE_INDEXBUFFER,
+    .usage = SG_USAGE_STREAM,
     .size = sizeof(GLfloat) * MAX_VERTICES,
   };
-  state.lamp.ibuf = binocle_backend_make_buffer(&ibuf_desc);
+  state.lamp.ibuf = sg_make_buffer(&ibuf_desc);
 
-  state.lamp.bind = (binocle_bindings){
+  state.lamp.bind = (sg_bindings){
     .vertex_buffers = {
       [0] = state.lamp.vbuf,
     },
@@ -303,84 +307,84 @@ void setup_lights() {
     kmVec3 ambient = {.x = 0.05f, .y = 0.05f, .z = 0.05f};
     kmVec3 diffuse = {.x = 0.8f, .y = 0.8f, .z = 0.8f};
     kmVec3 specular = {.x = 1.0f, .y = 1.0f, .z = 1.0f};
-    state.main.fs_uni.pointLight[0].position[0] = pointLightPositions[0].x;
-    state.main.fs_uni.pointLight[0].position[1] = pointLightPositions[0].y;
-    state.main.fs_uni.pointLight[0].position[2] = pointLightPositions[0].z;
-    state.main.fs_uni.pointLight[0].ambient[0] = ambient.x;
-    state.main.fs_uni.pointLight[0].ambient[1] = ambient.y;
-    state.main.fs_uni.pointLight[0].ambient[2] = ambient.z;
-    state.main.fs_uni.pointLight[0].diffuse[0] = diffuse.x;
-    state.main.fs_uni.pointLight[0].diffuse[1] = diffuse.y;
-    state.main.fs_uni.pointLight[0].diffuse[2] = diffuse.z;
-    state.main.fs_uni.pointLight[0].specular[0] = specular.x;
-    state.main.fs_uni.pointLight[0].specular[1] = specular.y;
-    state.main.fs_uni.pointLight[0].specular[2] = specular.z;
-    state.main.fs_uni.pointLight[0].constant = 1.0f;
-    state.main.fs_uni.pointLight[0].linear = 0.09f;
-    state.main.fs_uni.pointLight[0].quadratic = 0.032f;
+    state.main.fs_point1_uni.pointLight[0].position[0] = pointLightPositions[0].x;
+    state.main.fs_point1_uni.pointLight[0].position[1] = pointLightPositions[0].y;
+    state.main.fs_point1_uni.pointLight[0].position[2] = pointLightPositions[0].z;
+    state.main.fs_point1_uni.pointLight[0].ambient[0] = ambient.x;
+    state.main.fs_point1_uni.pointLight[0].ambient[1] = ambient.y;
+    state.main.fs_point1_uni.pointLight[0].ambient[2] = ambient.z;
+    state.main.fs_point1_uni.pointLight[0].diffuse[0] = diffuse.x;
+    state.main.fs_point1_uni.pointLight[0].diffuse[1] = diffuse.y;
+    state.main.fs_point1_uni.pointLight[0].diffuse[2] = diffuse.z;
+    state.main.fs_point1_uni.pointLight[0].specular[0] = specular.x;
+    state.main.fs_point1_uni.pointLight[0].specular[1] = specular.y;
+    state.main.fs_point1_uni.pointLight[0].specular[2] = specular.z;
+    state.main.fs_point1_uni.pointLight[0].constant = 1.0f;
+    state.main.fs_point1_uni.pointLight[0].linear = 0.09f;
+    state.main.fs_point1_uni.pointLight[0].quadratic = 0.032f;
   }
   {
     // point light 2
     kmVec3 ambient = {.x = 0.05f, .y = 0.05f, .z = 0.05f};
     kmVec3 diffuse = {.x = 0.8f, .y = 0.8f, .z = 0.8f};
     kmVec3 specular = {.x = 1.0f, .y = 1.0f, .z = 1.0f};
-    state.main.fs_uni.pointLight[1].position[0] = pointLightPositions[1].x;
-    state.main.fs_uni.pointLight[1].position[1] = pointLightPositions[1].y;
-    state.main.fs_uni.pointLight[1].position[2] = pointLightPositions[1].z;
-    state.main.fs_uni.pointLight[1].ambient[0] = ambient.x;
-    state.main.fs_uni.pointLight[1].ambient[1] = ambient.y;
-    state.main.fs_uni.pointLight[1].ambient[2] = ambient.z;
-    state.main.fs_uni.pointLight[1].diffuse[0] = diffuse.x;
-    state.main.fs_uni.pointLight[1].diffuse[1] = diffuse.y;
-    state.main.fs_uni.pointLight[1].diffuse[2] = diffuse.z;
-    state.main.fs_uni.pointLight[1].specular[0] = specular.x;
-    state.main.fs_uni.pointLight[1].specular[1] = specular.y;
-    state.main.fs_uni.pointLight[1].specular[2] = specular.z;
-    state.main.fs_uni.pointLight[1].constant = 1.0f;
-    state.main.fs_uni.pointLight[1].linear = 0.09f;
-    state.main.fs_uni.pointLight[1].quadratic = 0.032f;
+    state.main.fs_point1_uni.pointLight[1].position[0] = pointLightPositions[1].x;
+    state.main.fs_point1_uni.pointLight[1].position[1] = pointLightPositions[1].y;
+    state.main.fs_point1_uni.pointLight[1].position[2] = pointLightPositions[1].z;
+    state.main.fs_point1_uni.pointLight[1].ambient[0] = ambient.x;
+    state.main.fs_point1_uni.pointLight[1].ambient[1] = ambient.y;
+    state.main.fs_point1_uni.pointLight[1].ambient[2] = ambient.z;
+    state.main.fs_point1_uni.pointLight[1].diffuse[0] = diffuse.x;
+    state.main.fs_point1_uni.pointLight[1].diffuse[1] = diffuse.y;
+    state.main.fs_point1_uni.pointLight[1].diffuse[2] = diffuse.z;
+    state.main.fs_point1_uni.pointLight[1].specular[0] = specular.x;
+    state.main.fs_point1_uni.pointLight[1].specular[1] = specular.y;
+    state.main.fs_point1_uni.pointLight[1].specular[2] = specular.z;
+    state.main.fs_point1_uni.pointLight[1].constant = 1.0f;
+    state.main.fs_point1_uni.pointLight[1].linear = 0.09f;
+    state.main.fs_point1_uni.pointLight[1].quadratic = 0.032f;
   }
   {
     // point light 3
     kmVec3 ambient = {.x = 0.05f, .y = 0.05f, .z = 0.05f};
     kmVec3 diffuse = {.x = 0.8f, .y = 0.8f, .z = 0.8f};
     kmVec3 specular = {.x = 1.0f, .y = 1.0f, .z = 1.0f};
-    state.main.fs_uni.pointLight[2].position[0] = pointLightPositions[2].x;
-    state.main.fs_uni.pointLight[2].position[1] = pointLightPositions[2].y;
-    state.main.fs_uni.pointLight[2].position[2] = pointLightPositions[2].z;
-    state.main.fs_uni.pointLight[2].ambient[0] = ambient.x;
-    state.main.fs_uni.pointLight[2].ambient[1] = ambient.y;
-    state.main.fs_uni.pointLight[2].ambient[2] = ambient.z;
-    state.main.fs_uni.pointLight[2].diffuse[0] = diffuse.x;
-    state.main.fs_uni.pointLight[2].diffuse[1] = diffuse.y;
-    state.main.fs_uni.pointLight[2].diffuse[2] = diffuse.z;
-    state.main.fs_uni.pointLight[2].specular[0] = specular.x;
-    state.main.fs_uni.pointLight[2].specular[1] = specular.y;
-    state.main.fs_uni.pointLight[2].specular[2] = specular.z;
-    state.main.fs_uni.pointLight[2].constant = 1.0f;
-    state.main.fs_uni.pointLight[2].linear = 0.09f;
-    state.main.fs_uni.pointLight[2].quadratic = 0.032f;
+    state.main.fs_point2_uni.pointLight[0].position[0] = pointLightPositions[2].x;
+    state.main.fs_point2_uni.pointLight[0].position[1] = pointLightPositions[2].y;
+    state.main.fs_point2_uni.pointLight[0].position[2] = pointLightPositions[2].z;
+    state.main.fs_point2_uni.pointLight[0].ambient[0] = ambient.x;
+    state.main.fs_point2_uni.pointLight[0].ambient[1] = ambient.y;
+    state.main.fs_point2_uni.pointLight[0].ambient[2] = ambient.z;
+    state.main.fs_point2_uni.pointLight[0].diffuse[0] = diffuse.x;
+    state.main.fs_point2_uni.pointLight[0].diffuse[1] = diffuse.y;
+    state.main.fs_point2_uni.pointLight[0].diffuse[2] = diffuse.z;
+    state.main.fs_point2_uni.pointLight[0].specular[0] = specular.x;
+    state.main.fs_point2_uni.pointLight[0].specular[1] = specular.y;
+    state.main.fs_point2_uni.pointLight[0].specular[2] = specular.z;
+    state.main.fs_point2_uni.pointLight[0].constant = 1.0f;
+    state.main.fs_point2_uni.pointLight[0].linear = 0.09f;
+    state.main.fs_point2_uni.pointLight[0].quadratic = 0.032f;
   }
   {
     // point light 4
     kmVec3 ambient = {.x = 0.05f, .y = 0.05f, .z = 0.05f};
     kmVec3 diffuse = {.x = 0.8f, .y = 0.8f, .z = 0.8f};
     kmVec3 specular = {.x = 1.0f, .y = 1.0f, .z = 1.0f};
-    state.main.fs_uni.pointLight[3].position[0] = pointLightPositions[3].x;
-    state.main.fs_uni.pointLight[3].position[1] = pointLightPositions[3].y;
-    state.main.fs_uni.pointLight[3].position[2] = pointLightPositions[3].z;
-    state.main.fs_uni.pointLight[3].ambient[0] = ambient.x;
-    state.main.fs_uni.pointLight[3].ambient[1] = ambient.y;
-    state.main.fs_uni.pointLight[3].ambient[2] = ambient.z;
-    state.main.fs_uni.pointLight[3].diffuse[0] = diffuse.x;
-    state.main.fs_uni.pointLight[3].diffuse[1] = diffuse.y;
-    state.main.fs_uni.pointLight[3].diffuse[2] = diffuse.z;
-    state.main.fs_uni.pointLight[3].specular[0] = specular.x;
-    state.main.fs_uni.pointLight[3].specular[1] = specular.y;
-    state.main.fs_uni.pointLight[3].specular[2] = specular.z;
-    state.main.fs_uni.pointLight[3].constant = 1.0f;
-    state.main.fs_uni.pointLight[3].linear = 0.09f;
-    state.main.fs_uni.pointLight[3].quadratic = 0.032f;
+    state.main.fs_point2_uni.pointLight[1].position[0] = pointLightPositions[3].x;
+    state.main.fs_point2_uni.pointLight[1].position[1] = pointLightPositions[3].y;
+    state.main.fs_point2_uni.pointLight[1].position[2] = pointLightPositions[3].z;
+    state.main.fs_point2_uni.pointLight[1].ambient[0] = ambient.x;
+    state.main.fs_point2_uni.pointLight[1].ambient[1] = ambient.y;
+    state.main.fs_point2_uni.pointLight[1].ambient[2] = ambient.z;
+    state.main.fs_point2_uni.pointLight[1].diffuse[0] = diffuse.x;
+    state.main.fs_point2_uni.pointLight[1].diffuse[1] = diffuse.y;
+    state.main.fs_point2_uni.pointLight[1].diffuse[2] = diffuse.z;
+    state.main.fs_point2_uni.pointLight[1].specular[0] = specular.x;
+    state.main.fs_point2_uni.pointLight[1].specular[1] = specular.y;
+    state.main.fs_point2_uni.pointLight[1].specular[2] = specular.z;
+    state.main.fs_point2_uni.pointLight[1].constant = 1.0f;
+    state.main.fs_point2_uni.pointLight[1].linear = 0.09f;
+    state.main.fs_point2_uni.pointLight[1].quadratic = 0.032f;
   }
   // spotLight
   /*
@@ -467,17 +471,17 @@ void draw_light(kmVec3 position, kmAABB2 viewport) {
     state.lamp.vs_uni.modelMatrix[i] = modelMatrix.mat[i];
   }
 
-  const uint32_t vbuf_offset = binocle_backend_append_buffer(state.lamp.vbuf, &(binocle_range){ .ptr=g_quad_vertex_buffer_data, .size= 3 * 8 * sizeof(GLfloat) });
-  const uint32_t ibuf_offset = binocle_backend_append_buffer(state.lamp.ibuf, &(binocle_range){ .ptr=index_buffer_data, .size= 3 * 12 * sizeof(GLuint) });
+  const uint32_t vbuf_offset = sg_append_buffer(state.lamp.vbuf, &(sg_range){ .ptr=g_quad_vertex_buffer_data, .size= 3 * 8 * sizeof(GLfloat) });
+  const uint32_t ibuf_offset = sg_append_buffer(state.lamp.ibuf, &(sg_range){ .ptr=index_buffer_data, .size= 3 * 12 * sizeof(GLuint) });
 
   state.lamp.bind.vertex_buffer_offsets[0] = vbuf_offset;
   state.lamp.bind.index_buffer_offset = ibuf_offset;
 
-  binocle_backend_apply_pipeline(state.lamp.pip);
-  binocle_backend_apply_bindings(&state.lamp.bind);
-  binocle_backend_apply_uniforms(BINOCLE_SHADERSTAGE_VS, 0, &BINOCLE_RANGE(state.lamp.vs_uni));
+  sg_apply_pipeline(state.lamp.pip);
+  sg_apply_bindings(&state.lamp.bind);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(state.lamp.vs_uni));
 //  binocle_backend_apply_uniforms(BINOCLE_SHADERSTAGE_FS, 0, &BINOCLE_RANGE(state.lamp.fs_uni));
-  binocle_backend_draw(0, 3 * 12, 1);
+  sg_draw(0, 3 * 12, 1);
 
 
 
@@ -541,13 +545,13 @@ void draw_pbr_mesh(binocle_gd *gd, const struct binocle_mesh *mesh, kmAABB2 view
     state.main.vs_uni.modelMatrix[i] = modelMatrix.mat[i];
   }
 
-  binocle_backend_update_buffer(state.main.vbuf, &(binocle_range){ .ptr=mesh->vertices, .size=mesh->vertex_count * sizeof(binocle_vpctn) });
+  sg_update_buffer(state.main.vbuf, &(sg_range){ .ptr=mesh->vertices, .size=mesh->vertex_count * sizeof(binocle_vpctn) });
 
-  binocle_backend_apply_pipeline(state.main.pip);
-  binocle_backend_apply_bindings(&state.main.bind);
-  binocle_backend_apply_uniforms(BINOCLE_SHADERSTAGE_VS, 0, &BINOCLE_RANGE(state.main.vs_uni));
-  binocle_backend_apply_uniforms(BINOCLE_SHADERSTAGE_FS, 0, &BINOCLE_RANGE(state.main.fs_uni));
-  binocle_backend_draw(0, mesh->vertex_count, 1);
+  sg_apply_pipeline(state.main.pip);
+  sg_apply_bindings(&state.main.bind);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(state.main.vs_uni));
+  sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &SG_RANGE(state.main.fs_uni));
+  sg_draw(0, mesh->vertex_count, 1);
 }
 
 void do_hit_test(int mouse_x, int mouse_y, const struct binocle_mesh *mesh, kmAABB2 viewport, struct binocle_camera_3d *camera) {
@@ -689,7 +693,7 @@ void main_loop() {
 
   kmMat4Identity(&model.meshes[0].transform);
 
-  binocle_backend_begin_default_pass(&state.main.action, window->width, window->height);
+  sg_begin_default_pass(&state.main.action, window->width, window->height);
 
   draw_pbr_mesh(&gd, &model.meshes[0], viewport, &camera);
 
@@ -701,9 +705,9 @@ void main_loop() {
   draw_light(mouse_position, viewport);
   draw_light(ray_end_position, viewport);
 
-  binocle_backend_end_pass();
+  sg_end_pass();
 
-  binocle_backend_commit();
+  sg_commit();
 
   binocle_window_refresh(window);
   binocle_window_end_frame(window);
@@ -743,7 +747,7 @@ int main(int argc, char *argv[])
   size_t shader_fs_src_size;
   binocle_sdl_load_text_file(frag, &shader_fs_src, &shader_fs_src_size);
 
-  binocle_shader_desc default_shader_desc = {
+  sg_shader_desc default_shader_desc = {
     .vs.source = shader_vs_src,
     .attrs = {
       [0].name = "vertexPosition",
@@ -754,71 +758,83 @@ int main(int argc, char *argv[])
     .vs.uniform_blocks[0] = {
       .size = sizeof(default_shader_vs_uniforms_t),
       .uniforms = {
-        [0] = { .name = "projectionMatrix", .type = BINOCLE_UNIFORMTYPE_MAT4},
-        [1] = { .name = "viewMatrix", .type = BINOCLE_UNIFORMTYPE_MAT4},
-        [2] = { .name = "modelMatrix", .type = BINOCLE_UNIFORMTYPE_MAT4},
+        [0] = {.name = "projectionMatrix", .type = SG_UNIFORMTYPE_MAT4},
+        [1] = {.name = "viewMatrix", .type = SG_UNIFORMTYPE_MAT4},
+        [2] = {.name = "modelMatrix", .type = SG_UNIFORMTYPE_MAT4},
       }
     },
     .fs = {
       .source = shader_fs_src,
-      .uniform_blocks[0] = {
-        .size = sizeof(default_shader_fs_uniforms_t),
-        .uniforms = {
-          [0] = { .name = "viewPos", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [1] = { .name = "dirLight.direction", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [2] = { .name = "dirLight.ambient", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [3] = { .name = "dirLight.diffuse", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [4] = { .name = "dirLight.specular", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [5] = { .name = "pointLights[0].position", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [6] = { .name = "pointLights[0].ambient", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [7] = { .name = "pointLights[0].diffuse", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [8] = { .name = "pointLights[0].specular", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [9] = { .name = "pointLights[0].constant", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [10] = { .name = "pointLights[0].linear", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [11] = { .name = "pointLights[0].quadratic", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [12] = { .name = "pointLights[1].position", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [13] = { .name = "pointLights[1].ambient", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [14] = { .name = "pointLights[1].diffuse", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [15] = { .name = "pointLights[1].specular", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [16] = { .name = "pointLights[1].constant", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [17] = { .name = "pointLights[1].linear", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [18] = { .name = "pointLights[1].quadratic", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [19] = { .name = "pointLights[2].position", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [20] = { .name = "pointLights[2].ambient", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [21] = { .name = "pointLights[2].diffuse", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [22] = { .name = "pointLights[2].specular", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [23] = { .name = "pointLights[2].constant", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [24] = { .name = "pointLights[2].linear", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [25] = { .name = "pointLights[2].quadratic", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [26] = { .name = "pointLights[3].position", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [27] = { .name = "pointLights[3].ambient", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [28] = { .name = "pointLights[3].diffuse", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [29] = { .name = "pointLights[3].specular", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [30] = { .name = "pointLights[3].constant", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [31] = { .name = "pointLights[3].linear", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [32] = { .name = "pointLights[3].quadratic", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [33] = { .name = "spotLight.position", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [34] = { .name = "spotLight.direction", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [35] = { .name = "spotLight.ambient", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [36] = { .name = "spotLight.diffuse", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [37] = { .name = "spotLight.specular", .type = BINOCLE_UNIFORMTYPE_FLOAT3},
-          [38] = { .name = "spotLight.constant", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [39] = { .name = "spotLight.linear", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [40] = { .name = "spotLight.quadratic", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [41] = { .name = "spotLight.cutOff", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-          [42] = { .name = "spotLight.outerCutOff", .type = BINOCLE_UNIFORMTYPE_FLOAT},
-        }
-      },
-      .images = {
-        [0] = { .name = "material.albedoMap", .type = BINOCLE_IMAGETYPE_2D},
-        [1] = { .name = "material.normalMap", .type = BINOCLE_IMAGETYPE_2D},
-        [2] = { .name = "material.metallicMap", .type = BINOCLE_IMAGETYPE_2D},
-        [3] = { .name = "material.roughnessMap", .type = BINOCLE_IMAGETYPE_2D},
-        [4] = { .name = "material.aoMap", .type = BINOCLE_IMAGETYPE_2D},
+      .uniform_blocks = {
+        [0] = {
+          .size = sizeof(default_shader_fs_uniforms_t),
+          .uniforms = {
+            [0] = {.name = "viewPos", .type = SG_UNIFORMTYPE_FLOAT3},
+            [1] = {.name = "dirLight.direction", .type = SG_UNIFORMTYPE_FLOAT3},
+            [2] = {.name = "dirLight.ambient", .type = SG_UNIFORMTYPE_FLOAT3},
+            [3] = {.name = "dirLight.diffuse", .type = SG_UNIFORMTYPE_FLOAT3},
+            [4] = {.name = "dirLight.specular", .type = SG_UNIFORMTYPE_FLOAT3},
+            [5] = {.name = "spotLight.position", .type = SG_UNIFORMTYPE_FLOAT3},
+            [6] = {.name = "spotLight.direction", .type = SG_UNIFORMTYPE_FLOAT3},
+            [7] = {.name = "spotLight.ambient", .type = SG_UNIFORMTYPE_FLOAT3},
+            [8] = {.name = "spotLight.diffuse", .type = SG_UNIFORMTYPE_FLOAT3},
+            [9] = {.name = "spotLight.specular", .type = SG_UNIFORMTYPE_FLOAT3},
+            [10] = {.name = "spotLight.constant", .type = SG_UNIFORMTYPE_FLOAT},
+            [11] = {.name = "spotLight.linear", .type = SG_UNIFORMTYPE_FLOAT},
+            [12] = {.name = "spotLight.quadratic", .type = SG_UNIFORMTYPE_FLOAT},
+            [13] = {.name = "spotLight.cutOff", .type = SG_UNIFORMTYPE_FLOAT},
+            [14] = {.name = "spotLight.outerCutOff", .type = SG_UNIFORMTYPE_FLOAT},
+          },
+        },
+        [1] = {
+          .size = sizeof(default_shader_fs_uniforms_point_t),
+          .uniforms = {
+            [0] = {.name = "pointLights[0].position", .type = SG_UNIFORMTYPE_FLOAT3},
+            [1] = {.name = "pointLights[0].ambient", .type = SG_UNIFORMTYPE_FLOAT3},
+            [2] = {.name = "pointLights[0].diffuse", .type = SG_UNIFORMTYPE_FLOAT3},
+            [3] = {.name = "pointLights[0].specular", .type = SG_UNIFORMTYPE_FLOAT3},
+            [4] = {.name = "pointLights[0].constant", .type = SG_UNIFORMTYPE_FLOAT},
+            [5] = {.name = "pointLights[0].linear", .type = SG_UNIFORMTYPE_FLOAT},
+            [6] = {.name = "pointLights[0].quadratic", .type = SG_UNIFORMTYPE_FLOAT},
+            [7] = {.name = "pointLights[1].position", .type = SG_UNIFORMTYPE_FLOAT3},
+            [8] = {.name = "pointLights[1].ambient", .type = SG_UNIFORMTYPE_FLOAT3},
+            [9] = {.name = "pointLights[1].diffuse", .type = SG_UNIFORMTYPE_FLOAT3},
+            [10] = {.name = "pointLights[1].specular", .type = SG_UNIFORMTYPE_FLOAT3},
+            [11] = {.name = "pointLights[1].constant", .type = SG_UNIFORMTYPE_FLOAT},
+            [12] = {.name = "pointLights[1].linear", .type = SG_UNIFORMTYPE_FLOAT},
+            [13] = {.name = "pointLights[1].quadratic", .type = SG_UNIFORMTYPE_FLOAT},
+          },
+        },
+        [2] = {
+          .size = sizeof(default_shader_fs_uniforms_point_t),
+          .uniforms = {
+            [0] = {.name = "pointLights[2].position", .type = SG_UNIFORMTYPE_FLOAT3},
+            [1] = {.name = "pointLights[2].ambient", .type = SG_UNIFORMTYPE_FLOAT3},
+            [2] = {.name = "pointLights[2].diffuse", .type = SG_UNIFORMTYPE_FLOAT3},
+            [3] = {.name = "pointLights[2].specular", .type = SG_UNIFORMTYPE_FLOAT3},
+            [4] = {.name = "pointLights[2].constant", .type = SG_UNIFORMTYPE_FLOAT},
+            [5] = {.name = "pointLights[2].linear", .type = SG_UNIFORMTYPE_FLOAT},
+            [6] = {.name = "pointLights[2].quadratic", .type = SG_UNIFORMTYPE_FLOAT},
+            [7] = {.name = "pointLights[3].position", .type = SG_UNIFORMTYPE_FLOAT3},
+            [8] = {.name = "pointLights[3].ambient", .type = SG_UNIFORMTYPE_FLOAT3},
+            [9] = {.name = "pointLights[3].diffuse", .type = SG_UNIFORMTYPE_FLOAT3},
+            [10] = {.name = "pointLights[3].specular", .type = SG_UNIFORMTYPE_FLOAT3},
+            [11] = {.name = "pointLights[3].constant", .type = SG_UNIFORMTYPE_FLOAT},
+            [12] = {.name = "pointLights[3].linear", .type = SG_UNIFORMTYPE_FLOAT},
+            [13] = {.name = "pointLights[3].quadratic", .type = SG_UNIFORMTYPE_FLOAT},
+          },
         },
       },
+      .images = {
+        [0] = {.name = "material.albedoMap", .image_type = SG_IMAGETYPE_2D},
+        [1] = {.name = "material.normalMap", .image_type = SG_IMAGETYPE_2D},
+        [2] = {.name = "material.metallicMap", .image_type = SG_IMAGETYPE_2D},
+        [3] = {.name = "material.roughnessMap", .image_type = SG_IMAGETYPE_2D},
+        [4] = {.name = "material.aoMap", .image_type = SG_IMAGETYPE_2D},
+      },
+    },
   };
-  shader = binocle_backend_make_shader(&default_shader_desc);
+  shader = sg_make_shader(&default_shader_desc);
 
 
   sprintf(vert, "%s%s", binocle_data_dir, "lamp.vert");
@@ -832,7 +848,7 @@ int main(int argc, char *argv[])
   size_t lamp_shader_fs_src_size;
   binocle_sdl_load_text_file(frag, &lamp_shader_fs_src, &lamp_shader_fs_src_size);
 
-  binocle_shader_desc lamp_shader_desc = {
+  sg_shader_desc lamp_shader_desc = {
     .vs.source = lamp_shader_vs_src,
     .attrs = {
       [0].name = "vertexPosition",
@@ -840,14 +856,14 @@ int main(int argc, char *argv[])
     .vs.uniform_blocks[0] = {
       .size = sizeof(lamp_shader_uniforms_t),
       .uniforms = {
-        [0] = { .name = "projectionMatrix", .type = BINOCLE_UNIFORMTYPE_MAT4},
-        [1] = { .name = "viewMatrix", .type = BINOCLE_UNIFORMTYPE_MAT4},
-        [2] = { .name = "modelMatrix", .type = BINOCLE_UNIFORMTYPE_MAT4},
+        [0] = { .name = "projectionMatrix", .type = SG_UNIFORMTYPE_MAT4},
+        [1] = { .name = "viewMatrix", .type = SG_UNIFORMTYPE_MAT4},
+        [2] = { .name = "modelMatrix", .type = SG_UNIFORMTYPE_MAT4},
       }
     },
     .fs.source = lamp_shader_fs_src,
   };
-  lamp_shader = binocle_backend_make_shader(&lamp_shader_desc);
+  lamp_shader = sg_make_shader(&lamp_shader_desc);
 
 
   char filename[1024];
