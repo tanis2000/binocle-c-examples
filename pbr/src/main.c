@@ -273,32 +273,26 @@ void setup_lamp_pipeline() {
 }
 
 void setup_lights() {
-  //binocle_gd_set_uniform_float(*shader, "material.shininess", 32.0f);
-  /*
   {
     // directional light
-    kmVec3 direction;
-    direction.x = -0.2f;
-    direction.y = -1.0f;
-    direction.z = -0.3f;
-    kmVec3 ambient;
-    ambient.x = 0.1f;
-    ambient.y = 0.1f;
-    ambient.z = 0.1f;
-    kmVec3 diffuse;
-    diffuse.x = 0.4f;
-    diffuse.y = 0.4f;
-    diffuse.z = 0.4f;
-    kmVec3 specular;
-    specular.x = 0.5f;
-    specular.y = 0.5f;
-    specular.z = 0.5f;
-    binocle_gd_set_uniform_vec3(shader, "dirLight.direction", direction);
-    binocle_gd_set_uniform_vec3(shader, "dirLight.ambient", ambient);
-    binocle_gd_set_uniform_vec3(shader, "dirLight.diffuse", diffuse);
-    binocle_gd_set_uniform_vec3(shader, "dirLight.specular", specular);
+    kmVec3 direction = {.x = -0.2f, .y = -1.0f, .z = -0.3f};
+    kmVec3 ambient = { .x = 0.1f, .y = 0.1f, .z = 0.1f};
+    kmVec3 diffuse = {.x = 0.4f, .y = 0.4f, .z = 0.4f};
+    kmVec3 specular = {.x = 0.5f, .y = 0.5f, .z = 0.5f};
+    state.main.fs_uni.dirLight.direction[0] = direction.x;
+    state.main.fs_uni.dirLight.direction[1] = direction.y;
+    state.main.fs_uni.dirLight.direction[2] = direction.z;
+    state.main.fs_uni.dirLight.ambient[0] = ambient.x;
+    state.main.fs_uni.dirLight.ambient[1] = ambient.y;
+    state.main.fs_uni.dirLight.ambient[2] = ambient.z;
+    state.main.fs_uni.dirLight.diffuse[0] = diffuse.x;
+    state.main.fs_uni.dirLight.diffuse[1] = diffuse.y;
+    state.main.fs_uni.dirLight.diffuse[2] = diffuse.z;
+    state.main.fs_uni.dirLight.specular[0] = specular.x;
+    state.main.fs_uni.dirLight.specular[1] = specular.y;
+    state.main.fs_uni.dirLight.specular[2] = specular.z;
   }
-   */
+
   state.main.fs_uni.viewPos[0] = camera.position.x;
   state.main.fs_uni.viewPos[1] = camera.position.y;
   state.main.fs_uni.viewPos[2] = camera.position.z;
