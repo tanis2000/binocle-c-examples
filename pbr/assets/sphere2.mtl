@@ -1,0 +1,26 @@
+# Blender 4.0.1 MTL File: 'sphere2.blend'
+# www.blender.org
+
+newmtl PaintedMetal
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd PaintedMetal01_1K_BaseColor.png
+map_Ns PaintedMetal01_1K_Roughness.png
+map_refl PaintedMetal01_1K_Metallic.png
+map_Bump PaintedMetal01_1K_Normal.png
+
+newmtl RustedIron
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd rustediron2_albedo.png
+map_Ns rustediron2_roughness.png
+map_refl rustediron2_metallic.png
+map_Bump rustediron2_normal.png

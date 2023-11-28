@@ -117,6 +117,7 @@ typedef struct state_t {
     sg_buffer vbuf;
     sg_buffer ibuf;
   } lamp;
+  sg_sampler smp;
 } state_t;
 
 binocle_window *window;
@@ -170,8 +171,8 @@ void setup_default_pipeline() {
   sg_color off_clear_color = binocle_color_black();
   sg_pass_action action = {
     .colors[0] = {
-      .action = SG_ACTION_CLEAR,
-      .value = {
+      .load_action = SG_LOADACTION_CLEAR,
+      .clear_value = {
         .r = off_clear_color.r,
         .g = off_clear_color.g,
         .b = off_clear_color.b,
@@ -221,8 +222,8 @@ void setup_lamp_pipeline() {
   sg_color off_clear_color = binocle_color_green();
   sg_pass_action action = {
     .colors[0] = {
-      .action = SG_ACTION_CLEAR,
-      .value = {
+      .load_action = SG_LOADACTION_CLEAR,
+      .clear_value = {
         .r = off_clear_color.r,
         .g = off_clear_color.g,
         .b = off_clear_color.b,
@@ -508,11 +509,16 @@ void draw_light(kmVec3 position, kmAABB2 viewport) {
 }
 
 void apply_pbr_texture(binocle_material *material) {
-  state.main.bind.fs_images[0] = material->albedo_texture;
-  state.main.bind.fs_images[1] = material->normal_texture;
-  state.main.bind.fs_images[2] = material->metallic_texture;
-  state.main.bind.fs_images[3] = material->roughness_texture;
-  state.main.bind.fs_images[4] = material->ao_texture;
+  state.main.bind.fs.images[0] = material->albedo_texture;
+  state.main.bind.fs.samplers[0] = state.smp;
+  state.main.bind.fs.images[1] = material->normal_texture;
+  state.main.bind.fs.samplers[1] = state.smp;
+  state.main.bind.fs.images[2] = material->metallic_texture;
+  state.main.bind.fs.samplers[2] = state.smp;
+  state.main.bind.fs.images[3] = material->roughness_texture;
+  state.main.bind.fs.samplers[3] = state.smp;
+  state.main.bind.fs.images[4] = material->ao_texture;
+  state.main.bind.fs.samplers[4] = state.smp;
 }
 
 void draw_pbr_mesh(binocle_gd *gd, const struct binocle_mesh *mesh, kmAABB2 viewport, struct binocle_camera_3d *camera) {
@@ -820,12 +826,26 @@ int main(int argc, char *argv[])
         },
       },
       .images = {
-        [0] = {.name = "material.albedoMap", .image_type = SG_IMAGETYPE_2D},
-        [1] = {.name = "material.normalMap", .image_type = SG_IMAGETYPE_2D},
-        [2] = {.name = "material.metallicMap", .image_type = SG_IMAGETYPE_2D},
-        [3] = {.name = "material.roughnessMap", .image_type = SG_IMAGETYPE_2D},
-        [4] = {.name = "material.aoMap", .image_type = SG_IMAGETYPE_2D},
+        [0] = {.used = true, .image_type = SG_IMAGETYPE_2D},
+        [1] = {.used = true, .image_type = SG_IMAGETYPE_2D},
+        [2] = {.used = true, .image_type = SG_IMAGETYPE_2D},
+        [3] = {.used = true, .image_type = SG_IMAGETYPE_2D},
+        [4] = {.used = true, .image_type = SG_IMAGETYPE_2D},
       },
+      .samplers = {
+        [0] = { .used = true, .sampler_type = SG_SAMPLERTYPE_FILTERING},
+        [1] = { .used = true, .sampler_type = SG_SAMPLERTYPE_FILTERING},
+        [2] = { .used = true, .sampler_type = SG_SAMPLERTYPE_FILTERING},
+        [3] = { .used = true, .sampler_type = SG_SAMPLERTYPE_FILTERING},
+        [4] = { .used = true, .sampler_type = SG_SAMPLERTYPE_FILTERING},
+      },
+      .image_sampler_pairs = {
+        [0] = { .used = true, .glsl_name = "material.albedoMap", .image_slot = 0, .sampler_slot = 0},
+        [1] = { .used = true, .glsl_name = "material.normalMap", .image_slot = 1, .sampler_slot = 1},
+        [2] = { .used = true, .glsl_name = "material.metallicMap", .image_slot = 2, .sampler_slot = 2},
+        [3] = { .used = true, .glsl_name = "material.roughnessMap", .image_slot = 3, .sampler_slot = 3},
+        [4] = { .used = true, .glsl_name = "material.aoMap", .image_slot = 4, .sampler_slot = 4},
+      }
     },
   };
   shader = sg_make_shader(&default_shader_desc);
@@ -859,36 +879,22 @@ int main(int argc, char *argv[])
   };
   lamp_shader = sg_make_shader(&lamp_shader_desc);
 
+  state.smp = sg_make_sampler(&(sg_sampler_desc){
+    .min_filter = SG_FILTER_LINEAR,
+    .mag_filter = SG_FILTER_LINEAR,
+  });
 
   char filename[1024];
-  sprintf(filename, "%s%s", binocle_data_dir, "sphere.model");
-  char mtl_filename[1024];
-  sprintf(mtl_filename, "%s%s", binocle_data_dir, "sphere.mtl");
-  model = binocle_model_load_obj(filename, mtl_filename);
-  /*
-  kmMat4 scale;
-  kmMat4Scaling(&scale, 0.000005f, 0.000005f, 0.000005f);
-  kmMat4Multiply(&model.meshes[0].transform, &model.meshes[0].transform, &scale);
-   */
+  sprintf(filename, "%s%s", binocle_data_dir, "sphere2.obj");
+  model = binocle_model_load_obj(filename);
 
+  // Assign the shader to the materials of the single meshes.
+  for (int i = 0 ; i < model.mesh_count ; i++) {
+    model.meshes[i].material->shader = shader;
+  }
 
-  sprintf(filename, "%s%s", binocle_data_dir, "rustediron2_albedo.png");
-  albedo_image = binocle_image_load(filename);
-  model.meshes[0].material->albedo_texture = albedo_image;
-  model.meshes[0].material->shader = shader;
-
-  sprintf(filename, "%s%s", binocle_data_dir, "rustediron2_normal.png");
-  normal_image = binocle_image_load(filename);
-  model.meshes[0].material->normal_texture = normal_image;
-
-  sprintf(filename, "%s%s", binocle_data_dir, "rustediron2_metallic.png");
-  metallic_image = binocle_image_load(filename);
-  model.meshes[0].material->metallic_texture = metallic_image;
-
-  sprintf(filename, "%s%s", binocle_data_dir, "rustediron2_roughness.png");
-  roughness_image = binocle_image_load(filename);
-  model.meshes[0].material->roughness_texture = roughness_image;
-
+  // TODO: make sure we also set the ambient occlusion map in the exported model and load it there.
+  // This is just fixing up things for the time being to avoid breaking the shader
   sprintf(filename, "%s%s", binocle_data_dir, "rustediron2_ao.png");
   ao_image = binocle_image_load(filename);
   model.meshes[0].material->ao_texture = ao_image;

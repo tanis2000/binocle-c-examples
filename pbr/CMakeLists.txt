@@ -61,6 +61,17 @@ if (NOT BINOCLE_DATA_DIR)
     set(BINOCLE_DATA_DIR "${CMAKE_SOURCE_DIR}/assets/")
 endif ()
 
+# Exclude obj files in the assets folder from the list of files to link to avoid an
+# error while linking the executable.
+file(GLOB_RECURSE RESOURCES "${CMAKE_SOURCE_DIR}/assets/*")
+foreach(RES_FILE ${RESOURCES})
+    message("RES_FILE: ${RES_FILE}")
+    message("Setting header only to avoid obj files inclusion during linking to: ${RES_FILE}")
+    set_source_files_properties(${RES_FILE} PROPERTIES
+            HEADER_FILE_ONLY ON
+    )
+endforeach(RES_FILE)
+
 message("Project source dir: ${PROJECT_SOURCE_DIR}")
 
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.c)
