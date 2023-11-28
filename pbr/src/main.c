@@ -118,6 +118,10 @@ typedef struct state_t {
     sg_buffer ibuf;
   } lamp;
   sg_sampler smp;
+  struct {
+    binocle_mesh *selected_mesh;
+    sg_image default_selected_material;
+  } editor;
 } state_t;
 
 binocle_window *window;
@@ -199,7 +203,9 @@ void setup_default_pipeline() {
     },
     .cull_mode = SG_CULLMODE_FRONT,
     .depth = {
-      .compare = SG_COMPAREFUNC_ALWAYS,
+      .pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL,
+      .compare = SG_COMPAREFUNC_LESS_EQUAL,
+      .write_enabled = true,
     }
   });
 
@@ -554,7 +560,7 @@ void draw_pbr_mesh(binocle_gd *gd, const struct binocle_mesh *mesh, kmAABB2 view
   sg_draw(0, mesh->vertex_count, 1);
 }
 
-void do_hit_test(int mouse_x, int mouse_y, const struct binocle_mesh *mesh, kmAABB2 viewport, struct binocle_camera_3d *camera) {
+bool do_hit_test(int mouse_x, int mouse_y, const struct binocle_mesh *mesh, kmAABB2 viewport, struct binocle_camera_3d *camera) {
   kmVec3 origin;
   kmVec3Zero(&origin);
   kmVec3 direction;
@@ -587,7 +593,9 @@ void do_hit_test(int mouse_x, int mouse_y, const struct binocle_mesh *mesh, kmAA
   binocle_model_calculate_mesh_bounding_box(mesh, &aabb_min, &aabb_max);
   if (binocle_collision_ray_cast_obb(origin, direction, aabb_min, aabb_max, modelMatrix, &intersection_distance)) {
     binocle_log_info("HIT! distance: %f", intersection_distance);
+    return true;
   }
+  return false;
 }
 
 void main_loop() {
@@ -605,15 +613,47 @@ void main_loop() {
   }
 
   if (binocle_input_is_key_pressed(&input, KEY_D)) {
-    binocle_camera_3d_translate(&camera, 30.0f * dt, 0.0f, 0.0f);
+    if (state.editor.selected_mesh != NULL) {
+      kmMat4 trans = {0};
+      kmMat4Translation(&trans, 30.0f * dt, 0, 0);
+      kmMat4 current = {0};
+      kmMat4Assign(&current, &state.editor.selected_mesh->transform);
+      kmMat4Multiply(&state.editor.selected_mesh->transform, &current, &trans);
+    } else {
+      binocle_camera_3d_translate(&camera, 30.0f * dt, 0.0f, 0.0f);
+    }
   } else if (binocle_input_is_key_pressed(&input, KEY_A)) {
-    binocle_camera_3d_translate(&camera, -30.0f * dt, 0.0f, 0.0f);
+    if (state.editor.selected_mesh != NULL) {
+      kmMat4 trans = {0};
+      kmMat4Translation(&trans, -30.0f * dt, 0, 0);
+      kmMat4 current = {0};
+      kmMat4Assign(&current, &state.editor.selected_mesh->transform);
+      kmMat4Multiply(&state.editor.selected_mesh->transform, &current, &trans);
+    } else {
+      binocle_camera_3d_translate(&camera, -30.0f * dt, 0.0f, 0.0f);
+    }
   }
 
   if (binocle_input_is_key_pressed(&input, KEY_W)) {
-    binocle_camera_3d_translate(&camera, 0.0f, 0.0f, -30.0f * dt);
+    if (state.editor.selected_mesh != NULL) {
+      kmMat4 trans = {0};
+      kmMat4Translation(&trans, 0, 0, -30.0f * dt);
+      kmMat4 current = {0};
+      kmMat4Assign(&current, &state.editor.selected_mesh->transform);
+      kmMat4Multiply(&state.editor.selected_mesh->transform, &current, &trans);
+    } else {
+      binocle_camera_3d_translate(&camera, 0.0f, 0.0f, -30.0f * dt);
+    }
   } else if (binocle_input_is_key_pressed(&input, KEY_S)) {
-    binocle_camera_3d_translate(&camera, 0.0f, 0.0f, 30.0f * dt);
+    if (state.editor.selected_mesh != NULL) {
+      kmMat4 trans = {0};
+      kmMat4Translation(&trans, 0, 0, 30.0f * dt);
+      kmMat4 current = {0};
+      kmMat4Assign(&current, &state.editor.selected_mesh->transform);
+      kmMat4Multiply(&state.editor.selected_mesh->transform, &current, &trans);
+    } else {
+      binocle_camera_3d_translate(&camera, 0.0f, 0.0f, 30.0f * dt);
+    }
   }
 
   if (binocle_input_is_key_pressed(&input, KEY_R)) {
@@ -658,7 +698,16 @@ void main_loop() {
   if (binocle_input_is_mouse_pressed(input, MOUSE_LEFT)) {
     int mouse_x = binocle_input_get_mouse_x(input);
     int mouse_y = binocle_input_get_mouse_y(input);
-    do_hit_test(mouse_x, mouse_y, &model.meshes[0], viewport, &camera);
+    for (int i = 0 ; i < model.mesh_count ; i++) {
+      if (do_hit_test(mouse_x, mouse_y, &model.meshes[i], viewport, &camera)) {
+        state.editor.selected_mesh = &model.meshes[i];
+        model.meshes[i].material->albedo_texture = state.editor.default_selected_material;
+        break;
+      }
+      if (i == model.mesh_count - 1) {
+        state.editor.selected_mesh = NULL;
+      }
+    }
   }
 
   //binocle_gd_draw_test_triangle(shader);
@@ -691,11 +740,14 @@ void main_loop() {
      */
   }
 
-  kmMat4Identity(&model.meshes[0].transform);
+  //kmMat4Identity(&model.meshes[0].transform);
 
   sg_begin_default_pass(&state.main.action, window->width, window->height);
-
-  draw_pbr_mesh(&gd, &model.meshes[0], viewport, &camera);
+//  sg_begin_pass(state.main.pass, &state.main.action);
+  // TODO: figure out how to correctly manage the buffers to support multiple meshes
+  for (int i = 0 ; i < 1 ; i++) {
+    draw_pbr_mesh(&gd, &model.meshes[0], viewport, &camera);
+  }
 
 //  binocle_gd_apply_shader(&gd, lamp_shader);
   for (int i = 0 ; i < 4 ; i++) {
@@ -898,6 +950,9 @@ int main(int argc, char *argv[])
   sprintf(filename, "%s%s", binocle_data_dir, "rustediron2_ao.png");
   ao_image = binocle_image_load(filename);
   model.meshes[0].material->ao_texture = ao_image;
+
+  sprintf(filename, "%s%s", binocle_data_dir, "binocle-logo-full.png");
+  state.editor.default_selected_material = binocle_image_load(filename);
 
   setup_default_pipeline();
   setup_lamp_pipeline();
