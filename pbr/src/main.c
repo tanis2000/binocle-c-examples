@@ -557,6 +557,8 @@ void draw_pbr_mesh(binocle_gd *gd, const struct binocle_mesh *mesh, kmAABB2 view
   sg_apply_bindings(&state.main.bind);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(state.main.vs_uni));
   sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &SG_RANGE(state.main.fs_uni));
+  sg_apply_uniforms(SG_SHADERSTAGE_FS, 1, &SG_RANGE(state.main.fs_point1_uni));
+  sg_apply_uniforms(SG_SHADERSTAGE_FS, 2, &SG_RANGE(state.main.fs_point2_uni));
   sg_draw(0, mesh->vertex_count, 1);
 }
 
