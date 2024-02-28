@@ -118,38 +118,6 @@ typedef struct cache_t {
   size_t images_num;
 } cache_t;
 
-/// The main game state
-typedef struct game_t {
-  pools_t pools;
-  float dt;
-  cache_t cache;
-  bool debug_enabled;
-  binocle_input input;
-  ecs_world_t *ecs;
-  /// The level entity
-  ecs_entity_t level;
-  /// The hero entity
-  ecs_entity_t hero;
-  /// The game camera entity
-  ecs_entity_t game_camera;
-  struct {
-    binocle_gd gd;
-    binocle_camera camera;
-    binocle_ttfont default_font;
-    binocle_sprite_batch sprite_batch;
-    sg_shader default_shader;
-  } gfx;
-  struct {
-    ecs_entity_t update_entities;
-    ecs_entity_t post_update_entities;
-    ecs_entity_t update_game_camera;
-    ecs_entity_t post_update_game_camera;
-    ecs_entity_t draw;
-    ecs_entity_t draw_level;
-    ecs_entity_t hero_input_update;
-  } systems;
-} game_t;
-
 typedef enum LAYERS {
   LAYER_BG = 1,
   LAYER_MOBS = 2,
@@ -292,6 +260,39 @@ typedef struct game_camera_t {
   float brake_dist_near_bounds;
   float shake_power;
 } game_camera_t;
+
+/// The main game state
+typedef struct game_t {
+  pools_t pools;
+  float dt;
+  cache_t cache;
+  bool debug_enabled;
+  binocle_input input;
+  ecs_world_t *ecs;
+  /// The level entity
+  ecs_entity_t level;
+  /// The hero entity
+  ecs_entity_t hero;
+  /// The game camera entity
+  ecs_entity_t game_camera;
+  struct {
+    binocle_gd gd;
+    binocle_camera camera;
+    binocle_ttfont default_font;
+    binocle_sprite_batch sprite_batch;
+    sg_shader default_shader;
+    struct binocle_window *window;
+  } gfx;
+  struct {
+    ecs_entity_t update_entities;
+    ecs_entity_t post_update_entities;
+    ecs_entity_t update_game_camera;
+    ecs_entity_t post_update_game_camera;
+    ecs_entity_t draw;
+    ecs_entity_t draw_level;
+    ecs_entity_t hero_input_update;
+  } systems;
+} game_t;
 
 typedef enum ANIMATION_ID {
   ANIMATION_ID_HERO_IDLE1 = 0,

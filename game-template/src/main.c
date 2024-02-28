@@ -77,8 +77,6 @@ typedef struct screen_shader_vs_params_t {
 
 binocle_app app;
 char *binocle_data_dir = NULL;
-binocle_window *window;
-binocle_viewport_adapter *adapter;
 binocle_bitmapfont *font;
 sg_image font_image;
 binocle_material *font_material;
@@ -119,17 +117,17 @@ void create_game_camera() {
 }
 
 void main_loop() {
-  binocle_window_begin_frame(window);
-  float dt = (float)binocle_window_get_frame_time(window) / 1000.0f;
+  binocle_window_begin_frame(game.gfx.window);
+  float dt = (float)binocle_window_get_frame_time(game.gfx.window) / 1000.0f;
   game.dt = dt;
 
   binocle_input_update(&game.input);
 
   if (game.input.resized) {
-    kmVec2 oldWindowSize = {.x = window->width, .y = window->height};
-    window->width = game.input.newWindowSize.x;
-    window->height = game.input.newWindowSize.y;
-    binocle_viewport_adapter_reset(adapter, oldWindowSize, game.input.newWindowSize);
+    kmVec2 oldWindowSize = {.x = game.gfx.window->width, .y = game.gfx.window->height};
+    game.gfx.window->width = game.input.newWindowSize.x;
+    game.gfx.window->height = game.input.newWindowSize.y;
+    binocle_viewport_adapter_reset(game.gfx.camera.viewport_adapter, oldWindowSize, game.input.newWindowSize);
     game.input.resized = false;
   }
 
@@ -147,8 +145,11 @@ void main_loop() {
 //  }
 
 
-  kmAABB2 viewport = binocle_camera_get_viewport(game.gfx.camera);
-  binocle_sprite_batch_begin(&game.gfx.sprite_batch, binocle_camera_get_viewport(game.gfx.camera), BINOCLE_SPRITE_SORT_MODE_DEFERRED, &game.gfx.default_shader, binocle_camera_get_transform_matrix(&game.gfx.camera));
+  kmAABB2 viewport;
+  kmAABB2Initialize(&viewport, &(kmVec2){.x = DESIGN_WIDTH/2, .y = DESIGN_HEIGHT/2}, DESIGN_WIDTH, DESIGN_HEIGHT, 0);
+  binocle_sprite_batch_begin(&game.gfx.sprite_batch, viewport,
+                             BINOCLE_SPRITE_SORT_MODE_DEFERRED, &game.gfx.default_shader,
+                             binocle_camera_get_transform_matrix(&game.gfx.camera));
 
   kmVec2 scale;
   scale.x = 1.0f;
@@ -165,21 +166,22 @@ void main_loop() {
   kmMat4 view_matrix;
   kmMat4Identity(&view_matrix);
   // Gets the viewport calculated by the adapter
-  kmAABB2 vp = binocle_viewport_adapter_get_viewport(*adapter);
+  kmAABB2 screen_viewport = binocle_viewport_adapter_get_viewport(*game.gfx.camera.viewport_adapter);
   //binocle_sprite_draw(font_sprite, &gd, (uint64_t)font_sprite_pos.x, (uint64_t)font_sprite_pos.y, adapter.viewport);
 
 
   char fps[256] = {0};
-  sprintf(fps, "FPS:%llu", binocle_window_get_fps(window));
+  sprintf(fps, "FPS:%llu", binocle_window_get_fps(game.gfx.window));
   binocle_bitmapfont_draw_string(font, fps, 16, &game.gfx.gd, 20, 20, viewport, binocle_color_white(), view_matrix, 1);
 
   binocle_sprite_batch_end(&game.gfx.sprite_batch, viewport);
 
-  binocle_gd_render(&game.gfx.gd, window, DESIGN_WIDTH, DESIGN_HEIGHT, vp, view_matrix, 1.0f);
+  binocle_gd_render_offscreen(&game.gfx.gd);
+  binocle_gd_render_flat(&game.gfx.gd);
+  binocle_gd_render_screen(&game.gfx.gd, game.gfx.window, DESIGN_WIDTH, DESIGN_HEIGHT, screen_viewport, game.gfx.camera.viewport_adapter->scale_matrix, game.gfx.camera.viewport_adapter->inverse_multiplier);
 
-  binocle_window_refresh(window);
-  binocle_window_end_frame(window);
-  //binocle_log_info("FPS: %d", binocle_window_get_fps(&window));
+  binocle_window_refresh(game.gfx.window);
+  binocle_window_end_frame(game.gfx.window);
 }
 
 int main(int argc, char *argv[])
@@ -286,15 +288,16 @@ int main(int argc, char *argv[])
   binocle_data_dir = binocle_sdl_assets_dir();
   binocle_log_info("Current base path: %s", binocle_data_dir);
 
-  window = binocle_window_new(DESIGN_WIDTH, DESIGN_HEIGHT, "Binocle Sprite Batch");
-  binocle_window_set_background_color(window, binocle_color_azure());
-  binocle_window_set_minimum_size(window, DESIGN_WIDTH, DESIGN_HEIGHT);
-  adapter = binocle_viewport_adapter_new(window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING, BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, window->original_width, window->original_height, window->original_width, window->original_height);
+  game.gfx.window = binocle_window_new(DESIGN_WIDTH * SCALE, DESIGN_HEIGHT * SCALE, "Binocle Game Template");
+  binocle_window_set_background_color(game.gfx.window, binocle_color_azure());
+  binocle_window_set_minimum_size(game.gfx.window, DESIGN_WIDTH, DESIGN_HEIGHT);
+  binocle_viewport_adapter *adapter = binocle_viewport_adapter_new(game.gfx.window, BINOCLE_VIEWPORT_ADAPTER_KIND_SCALING,
+                                         BINOCLE_VIEWPORT_ADAPTER_SCALING_TYPE_PIXEL_PERFECT, DESIGN_WIDTH,
+                                         DESIGN_HEIGHT, DESIGN_WIDTH, DESIGN_HEIGHT);
   game.gfx.camera = binocle_camera_new(adapter);
   game.input = binocle_input_new();
   game.gfx.gd = binocle_gd_new();
-  binocle_gd_init(&game.gfx.gd, window);
-
+  binocle_gd_init(&game.gfx.gd, game.gfx.window);
 
 
 #ifdef BINOCLE_GL
