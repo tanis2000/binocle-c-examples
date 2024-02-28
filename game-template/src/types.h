@@ -14,6 +14,8 @@
 #include "flecs.h"
 #include "cute_tiled.h"
 #include "binocle_input.h"
+#include "binocle_audio.h"
+#include "gui/gui.h"
 
 // TODO: particles
 // TODO: entities
