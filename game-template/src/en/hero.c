@@ -64,12 +64,6 @@ node_component_t node_new() {
   };
 }
 
-profile_component_t profile_new() {
-  return (profile_component_t){
-    .name = SDL_strdup("entity"),
-  };
-}
-
 ecs_entity_t hero_new() {
   ecs_entity_t e = ecs_set_name(game.ecs, 0, "hero");
   ecs_set(game.ecs, e, health_component_t, {
@@ -85,6 +79,9 @@ ecs_entity_t hero_new() {
   });
   ecs_add(game.ecs, e, player_component_t);
   ecs_set(game.ecs, e, input_component_t, {0});
+  ecs_set(game.ecs, e, profile_component_t, {
+    .name = "hero"
+  });
   ecs_set(game.ecs, e, physics_component_t, {0});
   const physics_component_t *p = ecs_get(game.ecs, e, physics_component_t);
   physics_component_t physics = physics_new();

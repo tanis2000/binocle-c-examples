@@ -112,7 +112,7 @@ void create_entity() {
 void create_game_camera() {
   game.game_camera = ecs_set_name(game.ecs, 0, "game_camera");
   ecs_set(game.ecs, game.game_camera, game_camera_component_t, {0});
-  const game_camera_component_t *original_game_camera = ecs_get(game.ecs, game.game_camera, game_camera_component_t);
+  game_camera_component_t *original_game_camera = ecs_get_mut(game.ecs, game.game_camera, game_camera_component_t);
   game_camera_component_t gc = game_camera_new();
   memcpy(original_game_camera, &gc, sizeof(game_camera_component_t));
   game_camera_track_entity(original_game_camera, game.hero, false, 1.0f);
@@ -479,7 +479,7 @@ int main(int argc, char *argv[])
   ecs_set(game.ecs, game.level, level_component_t, {
     0
   });
-  level_component_t *level = ecs_get(game.ecs, game.level, level_component_t);
+  level_component_t *level = ecs_get_mut(game.ecs, game.level, level_component_t);
   level_load_tilemap(level, "maps/map01.json");
 
   cooldown_system_init(&game.pools, 16);
