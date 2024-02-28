@@ -24,6 +24,9 @@ graphics_component_t graphics_new() {
     .visible = true,
     .sprite = NULL,
     .frames = NULL,
+    .anim = {
+      .state = ANIMATION_ID_HERO_IDLE1
+    }
   };
 }
 
@@ -83,7 +86,7 @@ ecs_entity_t hero_new() {
     .name = "hero"
   });
   ecs_set(game.ecs, e, physics_component_t, {0});
-  const physics_component_t *p = ecs_get(game.ecs, e, physics_component_t);
+  physics_component_t *p = ecs_get_mut(game.ecs, e, physics_component_t);
   physics_component_t physics = physics_new();
   memcpy(p, &physics, sizeof(physics_component_t));
 
@@ -95,6 +98,14 @@ ecs_entity_t hero_new() {
 
   entity_load_image(g, "img/hero.png", 32, 32);
   entity_add_animation(g, ANIMATION_ID_HERO_IDLE1, (int[]){0}, 1, 8, true);
+  entity_add_animation(g, ANIMATION_ID_HERO_IDLE2, (int[]){1, 2}, 2, 8, true);
+  entity_add_animation(g, ANIMATION_ID_HERO_RUN, (int[]){3, 4, 5, 6, 7, 8}, 6, 14, true);
+  entity_add_animation(g, ANIMATION_ID_HERO_JUMP_UP, (int[]){9}, 1, 14, true);
+  entity_add_animation(g, ANIMATION_ID_HERO_JUMP_DOWN, (int[]){10}, 1, 14, true);
+  entity_add_animation(g, ANIMATION_ID_HERO_SHOOT, (int[]){11, 12}, 2, 8, true);
+  entity_add_animation(g, ANIMATION_ID_HERO_DEATH, (int[]){13, 14}, 2, 8, false);
+
+  ecs_set(game.ecs, e, state_component_t, {0});
 
   return e;
 }

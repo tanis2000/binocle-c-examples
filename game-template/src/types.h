@@ -187,6 +187,17 @@ typedef struct graphics_component_t {
 
   float pivot_x;
   float pivot_y;
+
+  struct {
+    int state;
+    int death;
+    int jump_up;
+    int jump_down;
+    int idle1;
+    int idle2;
+    int run;
+    int shoot;
+  } anim;
 } graphics_component_t;
 
 typedef struct physics_component_t {
@@ -285,6 +296,15 @@ typedef struct input_component_t {
   int dummy;
 } input_component_t;
 
+typedef struct state_machine_t {
+  int current_state;
+  int previous_state;
+} state_machine_t;
+
+typedef struct state_component_t {
+  state_machine_t state_machine;
+} state_component_t;
+
 /// The main game state
 typedef struct game_t {
   bool debug;
@@ -318,6 +338,7 @@ typedef struct game_t {
     ecs_entity_t draw;
     ecs_entity_t draw_level;
     ecs_entity_t input_update;
+    ecs_entity_t animations_update;
   } systems;
   struct {
     gui_handle_t debug_gui_handle;
@@ -348,6 +369,7 @@ extern ECS_COMPONENT_DECLARE(node_component_t);
 extern ECS_COMPONENT_DECLARE(level_component_t);
 extern ECS_COMPONENT_DECLARE(game_camera_component_t);
 extern ECS_COMPONENT_DECLARE(input_component_t);
+extern ECS_COMPONENT_DECLARE(state_component_t);
 
 extern ECS_TAG_DECLARE(player_component_t);
 

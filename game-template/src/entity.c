@@ -107,8 +107,8 @@ void entity_system_post_update(ecs_iter_t *it) {
       continue;
     }
 
-    entity_play_animation(&graphics[i], ANIMATION_ID_HERO_IDLE1, true);
-    entity_update_animation(&graphics[i], it->delta_time);
+//    entity_play_animation(&graphics[i], ANIMATION_ID_HERO_IDLE1, true);
+//    entity_update_animation(&graphics[i], it->delta_time);
     graphics[i].sprite_x = (physics[i].cx + physics[i].xr) * GRID;
     graphics[i].sprite_y = (physics[i].cy + physics[i].yr) * GRID;
     graphics[i].sprite_scale_x = physics[i].dir * graphics[i].sprite_scale_set_x;

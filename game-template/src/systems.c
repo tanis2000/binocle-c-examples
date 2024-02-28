@@ -5,6 +5,7 @@
 #include "systems.h"
 #include "types.h"
 #include "entity.h"
+#include "flecs.h"
 
 extern struct game_t game;
 
@@ -35,5 +36,50 @@ void system_input_update(ecs_iter_t *it) {
 //        // TODO: shoot bullet
 //      }
     }
+  }
+}
+
+void system_animations_update(ecs_iter_t *it) {
+  graphics_component_t *graphics = ecs_field(it, graphics_component_t, 1);
+  for (int i = 0; i < it->count; i++) {
+    graphics_component_t *g = &graphics[i];
+
+    if (g->anim.state == 6) {
+      entity_play_animation(g, ANIMATION_ID_HERO_DEATH, false);
+    } else if (g->anim.state == 3) {
+      entity_play_animation(g, ANIMATION_ID_HERO_JUMP_UP, false);
+    } else if (g->anim.state == 4) {
+      entity_play_animation(g, ANIMATION_ID_HERO_JUMP_DOWN, false);
+    } else if (g->anim.state == 2) {
+      entity_play_animation(g, ANIMATION_ID_HERO_RUN, false);
+    } else if (g->anim.state == 5) {
+      entity_play_animation(g, ANIMATION_ID_HERO_SHOOT, false);
+    } else {
+      if (g->anim.state == 1) {
+        entity_play_animation(g, ANIMATION_ID_HERO_IDLE2, false);
+      } else if (g->anim.state == 0){
+        entity_play_animation(g, ANIMATION_ID_HERO_IDLE1, false);
+      }
+    }
+
+//    if (e->health < 0) {
+//      entity_play_animation(e, ANIMATION_ID_HERO_DEATH, false);
+//    } else if (e->dy > 0 && !entity_on_ground(e)) {
+//      entity_play_animation(e, ANIMATION_ID_HERO_JUMP_UP, false);
+//    } else if (!entity_on_ground(e)) {
+//      entity_play_animation(e, ANIMATION_ID_HERO_JUMP_DOWN, false);
+//    } else if (entity_on_ground(e) && e->dx != 0) {
+//      entity_play_animation(e, ANIMATION_ID_HERO_RUN, false);
+//    } else if (hero_is_shooting(e)) {
+//      entity_play_animation(e, ANIMATION_ID_HERO_SHOOT, false);
+//    } else {
+//      if (m_rand_range_float(0, 1) < 0.4f) {
+//        entity_play_animation(e, ANIMATION_ID_HERO_IDLE2, false);
+//      } else {
+//        entity_play_animation(e, ANIMATION_ID_HERO_IDLE1, false);
+//      }
+//    }
+
+    entity_update_animation(g, it->delta_time);
   }
 }

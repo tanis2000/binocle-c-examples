@@ -97,6 +97,7 @@ ECS_COMPONENT_DECLARE(node_component_t);
 ECS_COMPONENT_DECLARE(level_component_t);
 ECS_COMPONENT_DECLARE(game_camera_component_t);
 ECS_COMPONENT_DECLARE(input_component_t);
+ECS_COMPONENT_DECLARE(state_component_t);
 
 ECS_TAG_DECLARE(player_component_t);
 
@@ -175,8 +176,9 @@ void main_loop() {
     binocle_audio_update_music_stream(music);
   }
 
-  ecs_run(game.ecs, game.systems.update_entities, dt, NULL);
   ecs_run(game.ecs, game.systems.input_update, dt, NULL);
+  ecs_run(game.ecs, game.systems.update_entities, dt, NULL);
+  ecs_run(game.ecs, game.systems.animations_update, dt, NULL);
   ecs_run(game.ecs, game.systems.post_update_entities, dt, NULL);
   ecs_run(game.ecs, game.systems.update_game_camera, dt, NULL);
   ecs_run(game.ecs, game.systems.draw_level, dt, NULL);
@@ -226,6 +228,7 @@ int main(int argc, char *argv[])
   ECS_COMPONENT_DEFINE(game.ecs, level_component_t);
   ECS_COMPONENT_DEFINE(game.ecs, game_camera_component_t);
   ECS_COMPONENT_DEFINE(game.ecs, input_component_t);
+  ECS_COMPONENT_DEFINE(game.ecs, state_component_t);
 
   ECS_TAG_DEFINE(game.ecs, player_component_t);
 
@@ -308,6 +311,16 @@ int main(int argc, char *argv[])
       {.id = ecs_id(input_component_t)},
     },
     .callback = system_input_update
+  });
+
+  game.systems.animations_update = ecs_system(game.ecs, {
+    .entity = ecs_entity(game.ecs, {
+      .name = "update_animations"
+    }),
+    .query.filter.terms = {
+      {.id = ecs_id(graphics_component_t)},
+    },
+    .callback = system_animations_update
   });
 
   binocle_app_desc_t app_desc = {0};
