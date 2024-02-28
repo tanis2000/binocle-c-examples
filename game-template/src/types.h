@@ -28,6 +28,8 @@
 #define DESIGN_WIDTH (320)
 #define DESIGN_HEIGHT (240)
 #define MAX_CACHED_IMAGES (256)
+#define MAX_CACHED_MUSIC (16)
+#define MAX_CACHED_SOUNDS (256)
 
 /// The handle of a cooldown
 typedef struct cooldown_handle_t {
@@ -113,9 +115,25 @@ typedef struct cached_image_t {
   const char *filename;
 } cached_image_t;
 
+typedef struct cached_music_t {
+  binocle_audio_music music;
+  const char *filename;
+} cached_music_t;
+
+typedef struct cached_sound_t {
+  binocle_audio_sound sound;
+  const char *filename;
+} cached_sound_t;
+
 typedef struct cache_t {
   cached_image_t images[MAX_CACHED_IMAGES];
   size_t images_num;
+
+  cached_music_t music[MAX_CACHED_MUSIC];
+  size_t music_num;
+
+  cached_sound_t sounds[MAX_CACHED_SOUNDS];
+  size_t sound_num;
 } cache_t;
 
 typedef enum LAYERS {
@@ -267,8 +285,10 @@ typedef struct input_component_t {
 
 /// The main game state
 typedef struct game_t {
+  bool debug;
   pools_t pools;
   float dt;
+  float elapsed_time;
   cache_t cache;
   bool debug_enabled;
   binocle_input input;
@@ -287,6 +307,7 @@ typedef struct game_t {
     sg_shader default_shader;
     struct binocle_window *window;
   } gfx;
+  binocle_audio audio;
   struct {
     ecs_entity_t update_entities;
     ecs_entity_t post_update_entities;
@@ -296,10 +317,24 @@ typedef struct game_t {
     ecs_entity_t draw_level;
     ecs_entity_t input_update;
   } systems;
+  struct {
+    gui_handle_t debug_gui_handle;
+    struct gui_t *debug_gui;
+    gui_handle_t game_gui_handle;
+    struct gui_t *game_gui;
+  } gui;
 } game_t;
 
 typedef enum ANIMATION_ID {
+  ANIMATION_ID_FX_MAIN = 0,
+
   ANIMATION_ID_HERO_IDLE1 = 0,
+  ANIMATION_ID_HERO_IDLE2 = 1,
+  ANIMATION_ID_HERO_RUN = 2,
+  ANIMATION_ID_HERO_JUMP_UP = 3,
+  ANIMATION_ID_HERO_JUMP_DOWN = 4,
+  ANIMATION_ID_HERO_SHOOT = 5,
+  ANIMATION_ID_HERO_DEATH = 6,
 } ANIMATION_ID;
 
 extern ECS_COMPONENT_DECLARE(health_component_t);
