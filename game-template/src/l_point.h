@@ -13,6 +13,6 @@ float l_point_get_level_x(l_point_t *p);
 float l_point_get_level_y(l_point_t *p);
 void l_point_set_level_x(l_point_t *p, float x);
 void l_point_set_level_y(l_point_t *p, float y);
-float l_point_ang_to(l_point_t *self, physics_t *physics, l_point_t *p, int32_t lvl_x, int32_t lvl_y);
+float l_point_ang_to(l_point_t *self, physics_component_t *physics, l_point_t *p, int32_t lvl_x, int32_t lvl_y);
 
 #endif //GAME_TEMPLATE_L_POINT_H

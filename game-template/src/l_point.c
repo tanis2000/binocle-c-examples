@@ -70,17 +70,17 @@ void l_point_set_level_case(l_point_t *p, int32_t x, int32_t y, float xr, float 
   p->yr = yr;
 }
 
-int32_t l_point_dist_case(physics_t *physics, l_point_t *p, int32_t tcx, int32_t tcy, float txr, float tyr) {
+int32_t l_point_dist_case(physics_component_t *physics, l_point_t *p, int32_t tcx, int32_t tcy, float txr, float tyr) {
   //TODO: implement
   return 0;
 }
 
-int32_t l_point_dist_px(physics_t *physics, l_point_t *p, int32_t lvl_x, int32_t lvl_y) {
+int32_t l_point_dist_px(physics_component_t *physics, l_point_t *p, int32_t lvl_x, int32_t lvl_y) {
   //TODO: implement
   return 0;
 }
 
-float l_point_ang_to(l_point_t *self, physics_t *physics, l_point_t *p, int32_t lvl_x, int32_t lvl_y) {
+float l_point_ang_to(l_point_t *self, physics_component_t *physics, l_point_t *p, int32_t lvl_x, int32_t lvl_y) {
   if (physics != NULL) {
     return atan2f((physics->cy + physics->yr) - l_point_get_cyf(self), (physics->cx + physics->xr) - l_point_get_cxf(self));
   } else if (p != NULL) {

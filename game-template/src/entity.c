@@ -16,7 +16,7 @@ extern struct game_t game;
 
 
 void draw_entities(ecs_iter_t *it) {
-  graphics_t *g = ecs_field(it, graphics_t, 1);
+  graphics_component_t *g = ecs_field(it, graphics_component_t, 1);
   for (int i = 0 ; i < it->count; i++) {
     if (g->visible && g->sprite != NULL) {
       kmVec2 scale;
@@ -29,14 +29,14 @@ void draw_entities(ecs_iter_t *it) {
 }
 
 void entity_system_update(ecs_iter_t *it) {
-  physics_t *physics = ecs_field(it, physics_t, 1);
-  collider_t *collider = ecs_field(it, collider_t, 2);
+  physics_component_t *physics = ecs_field(it, physics_component_t, 1);
+  collider_component_t *collider = ecs_field(it, collider_component_t, 2);
   ecs_query_t *q_level = it->ctx;
 
   ecs_iter_t qit = ecs_query_iter(it->world, q_level);
-  level_t *level = NULL;
+  level_component_t *level = NULL;
   if (ecs_query_next(&qit)) {
-    level = ecs_field(&qit, level_t, 1);
+    level = ecs_field(&qit, level_component_t, 1);
   }
 
   for (int i = 0; i < it->count; i++) {
@@ -99,8 +99,8 @@ void entity_system_update(ecs_iter_t *it) {
 }
 
 void entity_system_post_update(ecs_iter_t *it) {
-  physics_t *physics = ecs_field(it, physics_t, 1);
-  graphics_t *graphics = ecs_field(it, graphics_t, 2);
+  physics_component_t *physics = ecs_field(it, physics_component_t, 1);
+  graphics_component_t *graphics = ecs_field(it, graphics_component_t, 2);
 
   for (int i = 0; i < it->count; i++) {
     if (graphics[i].sprite == NULL) {
@@ -198,7 +198,7 @@ entity_handle_t entity_make(pools_t *pools) {
   return handle;
 }
 
-void entity_load_image(graphics_t *g, const char *filename, uint32_t width, uint32_t height) {
+void entity_load_image(graphics_component_t *g, const char *filename, uint32_t width, uint32_t height) {
   sg_image img = cache_load_image(filename);
   binocle_material *mat = binocle_material_new();
   mat->albedo_texture = img;
@@ -219,7 +219,7 @@ void entity_load_image(graphics_t *g, const char *filename, uint32_t width, uint
 }
 
 void entity_set_pos_grid(ecs_entity_t en, int32_t x, int32_t y) {
-  physics_t *p = ecs_get(game.ecs, en, physics_t);
+  physics_component_t *p = ecs_get(game.ecs, en, physics_component_t);
   p->cx = floor(x);
   p->cy = floor(y);
   p->xr = 0.5f;
@@ -255,8 +255,8 @@ void entity_cancel_velocities(entity_handle_t handle) {
 }
 
 bool entity_on_ground(ecs_entity_t en) {
-  level_t *level = ecs_get_mut(game.ecs, game.level, level_t);
-  physics_t *physics = ecs_get_mut(game.ecs, en, physics_t);
+  level_component_t *level = ecs_get_mut(game.ecs, game.level, level_component_t);
+  physics_component_t *physics = ecs_get_mut(game.ecs, en, physics_component_t);
   return level_has_wall_collision(level, physics->cx, physics->cy-1) && physics->yr == 0 && physics->dy <= 0;
 }
 
@@ -266,7 +266,7 @@ void entity_on_touch_wall(ecs_entity_t en, int32_t direction) {
 void entity_on_land(ecs_entity_t en) {
 }
 
-void entity_on_pre_step_x(ecs_entity_t en, level_t *level, physics_t *physics, collider_t *collider) {
+void entity_on_pre_step_x(ecs_entity_t en, level_component_t *level, physics_component_t *physics, collider_component_t *collider) {
   // Right collisions
   if (collider->has_collisions && physics->xr > 0.8f && level_has_wall_collision(level, physics->cx+1, physics->cy)) {
     entity_on_touch_wall(en, 1);
@@ -280,7 +280,7 @@ void entity_on_pre_step_x(ecs_entity_t en, level_t *level, physics_t *physics, c
   }
 }
 
-void entity_on_pre_step_y(ecs_entity_t en, level_t *level, physics_t *physics, collider_t *collider) {
+void entity_on_pre_step_y(ecs_entity_t en, level_component_t *level, physics_component_t *physics, collider_component_t *collider) {
   // Down collisions
   if (collider->has_collisions && physics->yr < 0.0f && level_has_wall_collision(level, physics->cx, physics->cy-1)) {
     physics->dy = 0;
@@ -296,45 +296,45 @@ void entity_on_pre_step_y(ecs_entity_t en, level_t *level, physics_t *physics, c
   }
 }
 
-float entity_get_attach_x(physics_t *physics) {
+float entity_get_attach_x(physics_component_t *physics) {
   return (physics->cx + physics->xr) * GRID;
 }
 
-float entity_get_attach_y(physics_t *physics) {
+float entity_get_attach_y(physics_component_t *physics) {
   return (physics->cy + physics->yr) * GRID;
 }
 
-float entity_get_left(physics_t *physics, graphics_t *graphics, collider_t *collider) {
+float entity_get_left(physics_component_t *physics, graphics_component_t *graphics, collider_component_t *collider) {
   return entity_get_attach_x(physics) + (0.0f - graphics->pivot_x) * collider->wid;
 }
 
-float entity_get_right(physics_t *physics, graphics_t *graphics, collider_t *collider) {
+float entity_get_right(physics_component_t *physics, graphics_component_t *graphics, collider_component_t *collider) {
   return entity_get_attach_x(physics) + (1.0f - graphics->pivot_x) * collider->wid;
 }
 
-float entity_get_top(physics_t *physics, graphics_t *graphics, collider_t *collider) {
+float entity_get_top(physics_component_t *physics, graphics_component_t *graphics, collider_component_t *collider) {
   return entity_get_attach_y(physics) + (1.0f - graphics->pivot_y) * collider->hei;
 }
 
-float entity_get_bottom(physics_t *physics, graphics_t *graphics, collider_t *collider) {
+float entity_get_bottom(physics_component_t *physics, graphics_component_t *graphics, collider_component_t *collider) {
   return entity_get_attach_y(physics) + (0.0f - graphics->pivot_y) * collider->hei;
 }
 
 float entity_get_center_x(ecs_entity_t en) {
-  physics_t *physics = ecs_get(game.ecs, en, physics_t);
-  graphics_t *graphics = ecs_get(game.ecs, en, graphics_t);
-  collider_t *collider = ecs_get(game.ecs, en, collider_t);
+  physics_component_t *physics = ecs_get(game.ecs, en, physics_component_t);
+  graphics_component_t *graphics = ecs_get(game.ecs, en, graphics_component_t);
+  collider_component_t *collider = ecs_get(game.ecs, en, collider_component_t);
   return entity_get_attach_x(physics) + (0.5f - graphics->pivot_x) * collider->wid;
 }
 
 float entity_get_center_y(ecs_entity_t en) {
-  physics_t *physics = ecs_get(game.ecs, en, physics_t);
-  graphics_t *graphics = ecs_get(game.ecs, en, graphics_t);
-  collider_t *collider = ecs_get(game.ecs, en, collider_t);
+  physics_component_t *physics = ecs_get(game.ecs, en, physics_component_t);
+  graphics_component_t *graphics = ecs_get(game.ecs, en, graphics_component_t);
+  collider_component_t *collider = ecs_get(game.ecs, en, collider_component_t);
   return entity_get_attach_y(physics) + (0.5f - graphics->pivot_y) * collider->hei;
 }
 
-bool entity_is_inside(physics_t *physics, graphics_t *graphics, collider_t *collider, float px, float py) {
+bool entity_is_inside(physics_component_t *physics, graphics_component_t *graphics, collider_component_t *collider, float px, float py) {
   return (px >= entity_get_left(physics, graphics, collider)
   && px <= entity_get_right(physics, graphics, collider)
   && py >= entity_get_bottom(physics, graphics, collider)
@@ -342,7 +342,7 @@ bool entity_is_inside(physics_t *physics, graphics_t *graphics, collider_t *coll
 }
 
 /*
-void entity_draw_debug(physics_t *physics, graphics_t *graphics, collider_t *collider) {
+void entity_draw_debug(physics_component_t *physics, graphics_component_t *graphics, collider_t *collider) {
   if (game.debug_enabled) {
     kmAABB2 viewport = binocle_camera_get_viewport(game.gfx.camera);
     char s[1024];
@@ -358,16 +358,16 @@ void entity_draw_debug(physics_t *physics, graphics_t *graphics, collider_t *col
 }
 */
 
-bool entity_is_alive(health_t *health) {
+bool entity_is_alive(health_component_t *health) {
   return health->health > 0;
 }
 
-//void entity_add_animation(graphics_t *graphics, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop) {
+//void entity_add_animation(graphics_component_t *graphics, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop) {
 //  float delay = 1.0f / fabsf(period);
 //  binocle_sprite_add_animation_with_frames(graphics->sprite, id, loop, delay, frames, frames_count);
 //}
 
-void entity_add_animation(graphics_t *graphics, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop) {
+void entity_add_animation(graphics_component_t *graphics, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop) {
   animation_frame_t af = {
     .frames = NULL,
     .frames_count = frames_count,
@@ -380,7 +380,7 @@ void entity_add_animation(graphics_t *graphics, ANIMATION_ID id, int frames[], i
   arrput(graphics->animations, af);
 }
 
-void entity_play_animation(graphics_t *graphics, ANIMATION_ID id, bool force) {
+void entity_play_animation(graphics_component_t *graphics, ANIMATION_ID id, bool force) {
   graphics->animation = &graphics->animations[id];
   if (force) {
     graphics->animation_timer = graphics->animation->period;
@@ -389,11 +389,11 @@ void entity_play_animation(graphics_t *graphics, ANIMATION_ID id, bool force) {
   }
 }
 
-void entity_stop_animation(graphics_t *graphics) {
+void entity_stop_animation(graphics_component_t *graphics) {
   graphics->animation = NULL;
 }
 
-void entity_update_animation(graphics_t *graphics, float dt) {
+void entity_update_animation(graphics_component_t *graphics, float dt) {
   if (graphics->animation == NULL) {
     return;
   }

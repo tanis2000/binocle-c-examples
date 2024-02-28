@@ -134,11 +134,11 @@ typedef struct hero_t {
   int32_t health;
 } hero_t;
 
-typedef struct health_t {
+typedef struct health_component_t {
   int32_t max_health;
   int32_t health;
   bool destroyed;
-} health_t;
+} health_component_t;
 
 typedef struct animation_frame_t {
   int *frames;
@@ -147,7 +147,7 @@ typedef struct animation_frame_t {
   bool loop;
 } animation_frame_t;
 
-typedef struct graphics_t {
+typedef struct graphics_component_t {
   binocle_sprite *sprite;
   binocle_subtexture *frames;
   animation_frame_t *animations;
@@ -167,9 +167,9 @@ typedef struct graphics_t {
 
   float pivot_x;
   float pivot_y;
-} graphics_t;
+} graphics_component_t;
 
-typedef struct physics_t {
+typedef struct physics_component_t {
   int32_t cx;
   int32_t cy;
   float xr;
@@ -187,22 +187,22 @@ typedef struct physics_t {
 
   int32_t dir;
   float time_mul;
-} physics_t;
+} physics_component_t;
 
-typedef struct collider_t {
+typedef struct collider_component_t {
   float hei;
   float wid;
   float radius;
   bool has_collisions;
-} collider_t;
+} collider_component_t;
 
-typedef struct profile_t {
+typedef struct profile_component_t {
   char *name;
-} profile_t;
+} profile_component_t;
 
-typedef struct node_t {
+typedef struct node_component_t {
   ecs_entity_t parent;
-} node_t;
+} node_component_t;
 
 typedef struct tile_t {
   int gid;
@@ -220,7 +220,7 @@ typedef struct spawner_t {
   int32_t cy;
 } spawner_t;
 
-typedef struct level_t {
+typedef struct level_component_t {
   cute_tiled_map_t *map;
   /// Collision map array
   bool *coll_map;
@@ -231,7 +231,7 @@ typedef struct level_t {
   LEVEL_MARK *marks_map;
   /// Array of spawners
   spawner_t *hero_spawners;
-} level_t;
+} level_component_t;
 
 typedef struct l_point_t {
   float cx;
@@ -240,7 +240,7 @@ typedef struct l_point_t {
   float yr;
 } l_point_t;
 
-typedef struct game_camera_t {
+typedef struct game_camera_component_t {
   l_point_t raw_focus;
   l_point_t clamped_focus;
   bool clamp_to_level_bounds;
@@ -259,7 +259,11 @@ typedef struct game_camera_t {
   float tracking_speed;
   float brake_dist_near_bounds;
   float shake_power;
-} game_camera_t;
+} game_camera_component_t;
+
+typedef struct input_component_t {
+  int dummy;
+} input_component_t;
 
 /// The main game state
 typedef struct game_t {
@@ -290,7 +294,7 @@ typedef struct game_t {
     ecs_entity_t post_update_game_camera;
     ecs_entity_t draw;
     ecs_entity_t draw_level;
-    ecs_entity_t hero_input_update;
+    ecs_entity_t input_update;
   } systems;
 } game_t;
 
@@ -298,15 +302,16 @@ typedef enum ANIMATION_ID {
   ANIMATION_ID_HERO_IDLE1 = 0,
 } ANIMATION_ID;
 
-extern ECS_COMPONENT_DECLARE(health_t);
-extern ECS_COMPONENT_DECLARE(collider_t);
-extern ECS_COMPONENT_DECLARE(physics_t);
-extern ECS_COMPONENT_DECLARE(graphics_t);
-extern ECS_COMPONENT_DECLARE(profile_t);
-extern ECS_COMPONENT_DECLARE(node_t);
-extern ECS_COMPONENT_DECLARE(level_t);
-extern ECS_COMPONENT_DECLARE(game_camera_t);
+extern ECS_COMPONENT_DECLARE(health_component_t);
+extern ECS_COMPONENT_DECLARE(collider_component_t);
+extern ECS_COMPONENT_DECLARE(physics_component_t);
+extern ECS_COMPONENT_DECLARE(graphics_component_t);
+extern ECS_COMPONENT_DECLARE(profile_component_t);
+extern ECS_COMPONENT_DECLARE(node_component_t);
+extern ECS_COMPONENT_DECLARE(level_component_t);
+extern ECS_COMPONENT_DECLARE(game_camera_component_t);
+extern ECS_COMPONENT_DECLARE(input_component_t);
 
-extern ECS_TAG_DECLARE(player_t);
+extern ECS_TAG_DECLARE(player_component_t);
 
 #endif //GAME_TEMPLATE_TYPES_H

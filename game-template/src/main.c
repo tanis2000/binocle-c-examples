@@ -41,6 +41,7 @@
 
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
+#include "systems.h"
 
 
 //#define GAMELOOP 1
@@ -86,20 +87,21 @@ sg_shader screen_shader;
 
 game_t game;
 
-ECS_COMPONENT_DECLARE(health_t);
-ECS_COMPONENT_DECLARE(collider_t);
-ECS_COMPONENT_DECLARE(physics_t);
-ECS_COMPONENT_DECLARE(graphics_t);
-ECS_COMPONENT_DECLARE(profile_t);
-ECS_COMPONENT_DECLARE(node_t);
-ECS_COMPONENT_DECLARE(level_t);
-ECS_COMPONENT_DECLARE(game_camera_t);
+ECS_COMPONENT_DECLARE(health_component_t);
+ECS_COMPONENT_DECLARE(collider_component_t);
+ECS_COMPONENT_DECLARE(physics_component_t);
+ECS_COMPONENT_DECLARE(graphics_component_t);
+ECS_COMPONENT_DECLARE(profile_component_t);
+ECS_COMPONENT_DECLARE(node_component_t);
+ECS_COMPONENT_DECLARE(level_component_t);
+ECS_COMPONENT_DECLARE(game_camera_component_t);
+ECS_COMPONENT_DECLARE(input_component_t);
 
-ECS_TAG_DECLARE(player_t);
+ECS_TAG_DECLARE(player_component_t);
 
 void create_entity() {
   ecs_entity_t en = hero_new();
-//  graphics_t *g = ecs_get_mut(game.ecs, en, graphics_t);
+//  graphics_component_t *g = ecs_get_mut(game.ecs, en, graphics_component_t);
 //  entity_load_image(g, "wabbit_alpha.png", 26, 37);
   game.hero = en;
 //  entity_set_pos_pixel(&game.pools, en, (float)rand()/RAND_MAX * bounding_box.max.x, (float)rand()/RAND_MAX * bounding_box.max.y);
@@ -108,10 +110,10 @@ void create_entity() {
 
 void create_game_camera() {
   game.game_camera = ecs_set_name(game.ecs, 0, "game_camera");
-  ecs_set(game.ecs, game.game_camera, game_camera_t, {0});
-  const game_camera_t *original_game_camera = ecs_get(game.ecs, game.game_camera, game_camera_t);
-  game_camera_t gc = game_camera_new();
-  memcpy(original_game_camera, &gc, sizeof(game_camera_t));
+  ecs_set(game.ecs, game.game_camera, game_camera_component_t, {0});
+  const game_camera_component_t *original_game_camera = ecs_get(game.ecs, game.game_camera, game_camera_component_t);
+  game_camera_component_t gc = game_camera_new();
+  memcpy(original_game_camera, &gc, sizeof(game_camera_component_t));
   game_camera_track_entity(original_game_camera, game.hero, false, 1.0f);
   game_camera_center_on_target(original_game_camera);
 }
@@ -156,7 +158,7 @@ void main_loop() {
   scale.y = 1.0f;
 
   ecs_run(game.ecs, game.systems.update_entities, dt, NULL);
-  ecs_run(game.ecs, game.systems.hero_input_update, dt, NULL);
+  ecs_run(game.ecs, game.systems.input_update, dt, NULL);
   ecs_run(game.ecs, game.systems.post_update_entities, dt, NULL);
   ecs_run(game.ecs, game.systems.update_game_camera, dt, NULL);
   ecs_run(game.ecs, game.systems.draw_level, dt, NULL);
@@ -189,23 +191,24 @@ int main(int argc, char *argv[])
   game = (game_t){0};
   game.ecs = ecs_init();
 
-  ECS_COMPONENT_DEFINE(game.ecs, health_t);
-  ECS_COMPONENT_DEFINE(game.ecs, graphics_t);
-  ECS_COMPONENT_DEFINE(game.ecs, physics_t);
-  ECS_COMPONENT_DEFINE(game.ecs, collider_t);
-  ECS_COMPONENT_DEFINE(game.ecs, profile_t);
-  ECS_COMPONENT_DEFINE(game.ecs, node_t);
-  ECS_COMPONENT_DEFINE(game.ecs, level_t);
-  ECS_COMPONENT_DEFINE(game.ecs, game_camera_t);
+  ECS_COMPONENT_DEFINE(game.ecs, health_component_t);
+  ECS_COMPONENT_DEFINE(game.ecs, graphics_component_t);
+  ECS_COMPONENT_DEFINE(game.ecs, physics_component_t);
+  ECS_COMPONENT_DEFINE(game.ecs, collider_component_t);
+  ECS_COMPONENT_DEFINE(game.ecs, profile_component_t);
+  ECS_COMPONENT_DEFINE(game.ecs, node_component_t);
+  ECS_COMPONENT_DEFINE(game.ecs, level_component_t);
+  ECS_COMPONENT_DEFINE(game.ecs, game_camera_component_t);
+  ECS_COMPONENT_DEFINE(game.ecs, input_component_t);
 
-  ECS_TAG_DEFINE(game.ecs, player_t);
+  ECS_TAG_DEFINE(game.ecs, player_component_t);
 
   game.systems.draw = ecs_system(game.ecs, {
     .entity = ecs_entity(game.ecs, {
       .name = "draw"
     }),
     .query.filter.terms = {
-      {.id = ecs_id(graphics_t)}
+      {.id = ecs_id(graphics_component_t)}
     },
     .callback = draw_entities
   });
@@ -215,14 +218,14 @@ int main(int argc, char *argv[])
       .name = "draw_level"
     }),
     .query.filter.terms = {
-      {.id = ecs_id(level_t)}
+      {.id = ecs_id(level_component_t)}
     },
     .callback = level_render
   });
 
   ecs_query_t  *q_level = ecs_query(game.ecs, {
     .filter.terms = {
-      { ecs_id(level_t), .inout = EcsIn },
+      { ecs_id(level_component_t), .inout = EcsIn },
     }
   });
 
@@ -231,8 +234,8 @@ int main(int argc, char *argv[])
       .name = "update_entities"
     }),
     .query.filter.terms = {
-      {.id = ecs_id(physics_t)},
-      {.id = ecs_id(collider_t)},
+      {.id = ecs_id(physics_component_t)},
+      {.id = ecs_id(collider_component_t)},
     },
     .ctx = q_level,
     .callback = entity_system_update
@@ -243,8 +246,8 @@ int main(int argc, char *argv[])
       .name = "post_update_entities"
     }),
     .query.filter.terms = {
-      {.id = ecs_id(physics_t)},
-      {.id = ecs_id(graphics_t)},
+      {.id = ecs_id(physics_component_t)},
+      {.id = ecs_id(graphics_component_t)},
     },
     .callback = entity_system_post_update
   });
@@ -254,7 +257,7 @@ int main(int argc, char *argv[])
       .name = "update_game_camera"
     }),
     .query.filter.terms = {
-      {.id = ecs_id(game_camera_t)},
+      {.id = ecs_id(game_camera_component_t)},
     },
     .callback = update_game_camera
   });
@@ -264,21 +267,21 @@ int main(int argc, char *argv[])
       .name = "post_update_game_camera"
     }),
     .query.filter.terms = {
-      {.id = ecs_id(game_camera_t)},
+      {.id = ecs_id(game_camera_component_t)},
     },
     .callback = post_update_game_camera
   });
 
-  game.systems.hero_input_update = ecs_system(game.ecs, {
+  game.systems.input_update = ecs_system(game.ecs, {
     .entity = ecs_entity(game.ecs, {
-      .name = "hero_input_update"
+      .name = "system_input_update"
     }),
     .query.filter.terms = {
-      {.id = ecs_id(physics_t)},
-      {.id = ecs_id(health_t)},
-      {.id = ecs_id(player_t)},
+      {.id = ecs_id(physics_component_t)},
+      {.id = ecs_id(health_component_t)},
+      {.id = ecs_id(input_component_t)},
     },
-    .callback = hero_input_update
+    .callback = system_input_update
   });
 
   binocle_app_desc_t app_desc = {0};
@@ -417,10 +420,10 @@ int main(int argc, char *argv[])
   binocle_gd_setup_default_pipeline(&game.gfx.gd, DESIGN_WIDTH, DESIGN_HEIGHT, game.gfx.default_shader, screen_shader);
 
   game.level = ecs_set_name(game.ecs, 0, "level");
-  ecs_set(game.ecs, game.level, level_t, {
+  ecs_set(game.ecs, game.level, level_component_t, {
     0
   });
-  level_t *level = ecs_get(game.ecs, game.level, level_t);
+  level_component_t *level = ecs_get(game.ecs, game.level, level_component_t);
   level_load_tilemap(level, "maps/map01.json");
 
   cooldown_system_init(&game.pools, 16);

@@ -9,21 +9,21 @@
 
 extern struct game_t game;
 
-int level_coord_id(level_t *level, int cx, int cy) {
+int level_coord_id(level_component_t *level, int cx, int cy) {
   return cx + cy * level->map->width;
 }
 
-bool level_is_valid(level_t *level, int cx, int cy) {
+bool level_is_valid(level_component_t *level, int cx, int cy) {
   return cx >= 0 && cx < level->map->width && cy >= 0 && cy <= level->map->height;
 }
 
-void level_set_collision(level_t *level, int x, int y, bool v) {
+void level_set_collision(level_component_t *level, int x, int y, bool v) {
   if (level_is_valid(level, x, y)) {
     level->coll_map[level_coord_id(level, x, y)] = v;
   }
 }
 
-bool level_has_collision(level_t *level, int32_t cx, int32_t cy) {
+bool level_has_collision(level_component_t *level, int32_t cx, int32_t cy) {
   if (!level_is_valid(level, cx, cy)) {
     return true;
   }
@@ -35,44 +35,44 @@ bool level_has_collision(level_t *level, int32_t cx, int32_t cy) {
   return false;
 }
 
-bool level_has_wall_collision(level_t *level, int32_t cx, int32_t cy) {
+bool level_has_wall_collision(level_component_t *level, int32_t cx, int32_t cy) {
   return level_has_collision(level, cx, cy);
 }
 
-void level_set_mark(level_t *level, int32_t cx, int32_t cy, LEVEL_MARK mark) {
+void level_set_mark(level_component_t *level, int32_t cx, int32_t cy, LEVEL_MARK mark) {
   if (level_is_valid(level, cx, cy)) {
     level->marks_map[level_coord_id(level, cx, cy)] = mark;
   }
 }
 
-bool level_has_mark(level_t *level, int32_t cx, int32_t cy, LEVEL_MARK mark) {
+bool level_has_mark(level_component_t *level, int32_t cx, int32_t cy, LEVEL_MARK mark) {
   if (!level_is_valid(level, cx, cy)) {
     return false;
   }
   return (level->marks_map[level_coord_id(level, cx, cy)] == mark);
 }
 
-int level_get_c_wid(level_t *level) {
+int level_get_c_wid(level_component_t *level) {
   return level->map->width;
 }
 
-int level_get_c_hei(level_t *level) {
+int level_get_c_hei(level_component_t *level) {
   return level->map->height;
 }
 
-int level_get_px_wid(level_t *level) {
+int level_get_px_wid(level_component_t *level) {
   return level_get_c_wid(level) * GRID;
 }
 
-int level_get_px_hei(level_t *level) {
+int level_get_px_hei(level_component_t *level) {
   return level_get_c_hei(level) * GRID;
 }
 
-spawner_t *level_get_hero_spawner(level_t *level) {
+spawner_t *level_get_hero_spawner(level_component_t *level) {
   return &level->hero_spawners[0];
 }
 
-void level_load_tilemap(level_t *level, const char *filename) {
+void level_load_tilemap(level_component_t *level, const char *filename) {
   char *json = NULL;
   size_t json_length = 0;
   if (!binocle_sdl_load_text_file(filename, &json, &json_length)) {
@@ -162,7 +162,7 @@ void level_load_tilemap(level_t *level, const char *filename) {
   }
 }
 
-void level_destroy_tilemap(level_t *level) {
+void level_destroy_tilemap(level_component_t *level) {
   if (level->map == NULL) {
     return;
   }
@@ -172,7 +172,7 @@ void level_destroy_tilemap(level_t *level) {
 }
 
 void level_render(ecs_iter_t *it) {
-  level_t *level = ecs_field(it, level_t, 1);
+  level_component_t *level = ecs_field(it, level_component_t, 1);
   for (int i = 0 ; i < it->count; i++) {
     if (level->sprite != NULL) {
       cute_tiled_layer_t *layer = level->map->layers;

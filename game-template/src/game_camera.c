@@ -9,8 +9,8 @@
 
 extern struct game_t game;
 
-game_camera_t game_camera_new() {
-  game_camera_t res = (game_camera_t){
+game_camera_component_t game_camera_new() {
+  game_camera_component_t res = (game_camera_component_t){
     .raw_focus = l_point_new(),
     .clamped_focus = l_point_new(),
     .clamp_to_level_bounds = true,
@@ -34,50 +34,50 @@ game_camera_t game_camera_new() {
   return res;
 }
 
-float game_camera_get_px_wid(game_camera_t *gc) {
+float game_camera_get_px_wid(game_camera_component_t *gc) {
   return ceilf(DESIGN_WIDTH / gc->zoom);
 }
 
-float game_camera_get_px_hei(game_camera_t *gc) {
+float game_camera_get_px_hei(game_camera_component_t *gc) {
   return ceilf(DESIGN_HEIGHT / gc->zoom);
 }
 
-float game_camera_get_left(game_camera_t *gc) {
+float game_camera_get_left(game_camera_component_t *gc) {
   return floorf(l_point_get_level_x(&gc->clamped_focus) - game_camera_get_px_wid(gc) * 0.5f);
 }
 
-float game_camera_get_right(game_camera_t *gc) {
+float game_camera_get_right(game_camera_component_t *gc) {
   return floorf(l_point_get_level_x(&gc->clamped_focus) + game_camera_get_px_wid(gc) * 0.5f);
 }
 
-float game_camera_get_top(game_camera_t *gc) {
+float game_camera_get_top(game_camera_component_t *gc) {
   return floorf(l_point_get_level_y(&gc->clamped_focus) + game_camera_get_px_hei(gc) * 0.5f);
 }
 
-float game_camera_get_bottom(game_camera_t *gc) {
+float game_camera_get_bottom(game_camera_component_t *gc) {
   return floorf(l_point_get_level_y(&gc->clamped_focus) - game_camera_get_px_hei(gc) * 0.5f);
 }
 
-float game_camera_get_center_x(game_camera_t *gc) {
+float game_camera_get_center_x(game_camera_component_t *gc) {
   return floorf((game_camera_get_left(gc) + game_camera_get_right(gc)) * 0.5f);
 }
 
-float game_camera_get_center_y(game_camera_t *gc) {
+float game_camera_get_center_y(game_camera_component_t *gc) {
   return floorf((game_camera_get_bottom(gc) + game_camera_get_top(gc)) * 0.5f);
 }
 
-void game_camera_set_zoom(game_camera_t *gc, float zoom) {
+void game_camera_set_zoom(game_camera_component_t *gc, float zoom) {
   gc->zoom = kmClamp(zoom, 1, 10);
 }
 
-bool game_camera_is_on_screen(game_camera_t *gc, int32_t level_x, int32_t level_y) {
+bool game_camera_is_on_screen(game_camera_component_t *gc, int32_t level_x, int32_t level_y) {
   return level_x >= game_camera_get_left(gc)
   && level_x <= game_camera_get_right(gc)
   && level_y <= game_camera_get_top(gc)
   && level_y >= game_camera_get_bottom(gc);
 }
 
-bool game_camera_is_on_screen_case(game_camera_t *gc, int32_t cx, int32_t cy) {
+bool game_camera_is_on_screen_case(game_camera_component_t *gc, int32_t cx, int32_t cy) {
   int32_t pad = 32;
   return cx * GRID >= game_camera_get_left(gc) - pad
   && (cx+1) * GRID <= game_camera_get_right(gc) + pad
@@ -85,11 +85,11 @@ bool game_camera_is_on_screen_case(game_camera_t *gc, int32_t cx, int32_t cy) {
   && (cy+1) * GRID >= game_camera_get_bottom(gc) - pad;
 }
 
-void game_camera_set_tracking_speed(game_camera_t *gc, float speed) {
+void game_camera_set_tracking_speed(game_camera_component_t *gc, float speed) {
   gc->tracking_speed = kmClamp(speed, 0.01f, 10);
 }
 
-void game_camera_center_on_target(game_camera_t *gc) {
+void game_camera_center_on_target(game_camera_component_t *gc) {
   if (gc->target == 0) {
     return;
   }
@@ -98,7 +98,7 @@ void game_camera_center_on_target(game_camera_t *gc) {
   l_point_set_level_y(&gc->raw_focus, entity_get_center_y(gc->target) + gc->target_off_y);
 }
 
-void game_camera_track_entity(game_camera_t *gc, ecs_entity_t e, bool immediate, float speed) {
+void game_camera_track_entity(game_camera_component_t *gc, ecs_entity_t e, bool immediate, float speed) {
   gc->target = e;
   game_camera_set_tracking_speed(gc, speed);
   if (immediate || l_point_get_level_x(&gc->raw_focus) == 0 && l_point_get_level_y(&gc->raw_focus) == 0) {
@@ -106,7 +106,7 @@ void game_camera_track_entity(game_camera_t *gc, ecs_entity_t e, bool immediate,
   }
 }
 
-void game_camera_apply(game_camera_t *gc) {
+void game_camera_apply(game_camera_component_t *gc) {
   float cam_x = floorf(l_point_get_level_x(&gc->clamped_focus) - (float)game_camera_get_px_wid(gc) * 0.5f);
   float cam_y = floorf(l_point_get_level_y(&gc->clamped_focus) - (float)game_camera_get_px_hei(gc) * 0.5f);
 
@@ -119,10 +119,10 @@ void game_camera_apply(game_camera_t *gc) {
 }
 
 void update_game_camera(ecs_iter_t *it) {
-  game_camera_t *gcs = ecs_field(it, game_camera_t, 1);
-  const level_t *level = ecs_get(game.ecs, game.level, level_t);
+  game_camera_component_t *gcs = ecs_field(it, game_camera_component_t, 1);
+  const level_component_t *level = ecs_get(game.ecs, game.level, level_component_t);
   for (int i = 0 ; i < it->count; i++) {
-    game_camera_t *gc = &gcs[i];
+    game_camera_component_t *gc = &gcs[i];
     // target tracking
     if (gc->target != 0) {
       float spd_x = 0.015f * gc->tracking_speed * gc->zoom;
@@ -193,9 +193,9 @@ void update_game_camera(ecs_iter_t *it) {
 }
 
 void post_update_game_camera(ecs_iter_t *it) {
-  game_camera_t *gcs = ecs_field(it, game_camera_t, 1);
+  game_camera_component_t *gcs = ecs_field(it, game_camera_component_t, 1);
   for (int i = 0 ; i < it->count; i++) {
-    game_camera_t *gc = &gcs[i];
+    game_camera_component_t *gc = &gcs[i];
     game_camera_apply(gc);
   }
 }
