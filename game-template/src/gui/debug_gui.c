@@ -13,6 +13,24 @@ void debug_gui_entity(entity_t *e) {
   igText("Name: %s", e->name);
 }
 
+void debug_gui_scene(scene_t *e) {
+  igText("Name: %s", e->name);
+}
+
+void debug_gui_scenes() {
+  static bool scenes_open;
+  if (igBegin("Scenes", &scenes_open, ImGuiWindowFlags_None)) {
+    for (int i = 0 ; i < game.num_scenes ; i++) {
+      scene_t *e = &game.scenes[i];
+      if (igTreeNode_Str(e->name)) {
+        debug_gui_scene(e);
+        igTreePop();
+      }
+    }
+  }
+  igEnd();
+}
+
 void debug_gui_draw(float dt) {
   if (!game.debug) {
     return;
@@ -45,6 +63,8 @@ void debug_gui_draw(float dt) {
     }
   }
   igEnd();
+
+  debug_gui_scenes();
 
   gui_wrap_render_frame(gui);
 }

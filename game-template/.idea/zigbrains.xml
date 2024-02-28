@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ZLSSettings">
+    <option name="zlsPath" value="$PROJECT_DIR$/../../zls/zig-out/bin/zls" />
+    <option name="initialAutodetectHasBeenDone" value="true" />
+  </component>
+  <component name="ZigProjectSettings">
+    <option name="toolchainHomeDirectory" value="$USER_HOME$/Downloads/zig" />
+    <option name="explicitPathToStd" value="Users/tanis/Downloads/zig/lib/std" />
+  </component>
+</project>
