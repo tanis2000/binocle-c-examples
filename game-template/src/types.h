@@ -304,7 +304,7 @@ typedef struct game_t {
   struct {
     binocle_gd gd;
     binocle_camera camera;
-    binocle_ttfont default_font;
+    binocle_ttfont *default_font;
     binocle_sprite_batch sprite_batch;
     sg_shader default_shader;
     struct binocle_window *window;

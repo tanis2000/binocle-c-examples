@@ -91,6 +91,8 @@ message("Project source dir: ${PROJECT_SOURCE_DIR}")
 file(GLOB_RECURSE SOURCES
         ${PROJECT_SOURCE_DIR}/src/*.c
         ${PROJECT_SOURCE_DIR}/src/**/*.c
+        ${PROJECT_SOURCE_DIR}/src/*.cpp
+        ${PROJECT_SOURCE_DIR}/src/**/*.cpp
         )
 file(GLOB_RECURSE HEADERS
         ${PROJECT_SOURCE_DIR}/src/*.h
@@ -136,6 +138,8 @@ endif ()
 file(GLOB SOURCE_FILES
 ${CMAKE_SOURCE_DIR}/src/*.c
 ${CMAKE_SOURCE_DIR}/src/**/*.c
+        ${CMAKE_SOURCE_DIR}/src/*.cpp
+        ${CMAKE_SOURCE_DIR}/src/**/*.cpp
 ${CMAKE_SOURCE_DIR}/src/*.h
 ${CMAKE_SOURCE_DIR}/src/**/*.h
         )

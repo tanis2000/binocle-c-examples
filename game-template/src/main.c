@@ -42,7 +42,8 @@
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 #include "systems.h"
-
+#include "gui/gui.h"
+#include "gui/debug_gui.h"
 
 //#define GAMELOOP 1
 #define START_SPRITES 1
@@ -122,18 +123,28 @@ void main_loop() {
   binocle_window_begin_frame(game.gfx.window);
   float dt = (float)binocle_window_get_frame_time(game.gfx.window) / 1000.0f;
   game.dt = dt;
+  game.elapsed_time += dt;
 
   binocle_input_update(&game.input);
+  gui_pass_input_to_imgui(game.gui.debug_gui_handle, &game.input);
+  gui_pass_input_to_imgui(game.gui.game_gui_handle, &game.input);
 
   if (game.input.resized) {
     kmVec2 oldWindowSize = {.x = game.gfx.window->width, .y = game.gfx.window->height};
     game.gfx.window->width = game.input.newWindowSize.x;
     game.gfx.window->height = game.input.newWindowSize.y;
     binocle_viewport_adapter_reset(game.gfx.camera.viewport_adapter, oldWindowSize, game.input.newWindowSize);
+    gui_recreate_imgui_render_target(game.gui.debug_gui_handle, game.gfx.window->width, game.gfx.window->height);
+    gui_set_viewport(game.gui.debug_gui_handle, game.gfx.window->width, game.gfx.window->height);
     game.input.resized = false;
   }
 
   cooldown_system_update(&game.pools, dt);
+
+  if (binocle_input_is_key_down(game.input, KEY_1)) {
+    game.debug = !game.debug;
+  }
+
 
 //  if (!cooldown_has(&game.pools, "new_entity")) {
 //    // Add one more sprite every 3 seconds
@@ -156,6 +167,13 @@ void main_loop() {
   kmVec2 scale;
   scale.x = 1.0f;
   scale.y = 1.0f;
+
+  debug_gui_draw(dt);
+
+  for (int i = 0 ; i < game.cache.music_num ; i++) {
+    binocle_audio_music *music = &game.cache.music[i].music;
+    binocle_audio_update_music_stream(music);
+  }
 
   ecs_run(game.ecs, game.systems.update_entities, dt, NULL);
   ecs_run(game.ecs, game.systems.input_update, dt, NULL);
@@ -181,6 +199,14 @@ void main_loop() {
   binocle_gd_render_offscreen(&game.gfx.gd);
   binocle_gd_render_flat(&game.gfx.gd);
   binocle_gd_render_screen(&game.gfx.gd, game.gfx.window, DESIGN_WIDTH, DESIGN_HEIGHT, screen_viewport, game.gfx.camera.viewport_adapter->scale_matrix, game.gfx.camera.viewport_adapter->inverse_multiplier);
+
+  if (game.debug) {
+    struct gui_t *gui = gui_resources_get_gui("debug");
+    gui_set_context(gui);
+    gui_render_to_screen(gui, &game.gfx.gd, game.gfx.window, DESIGN_WIDTH, DESIGN_HEIGHT, screen_viewport,
+                         game.gfx.camera.viewport_adapter->scale_matrix,
+                         game.gfx.camera.viewport_adapter->inverse_multiplier);
+  }
 
   binocle_window_refresh(game.gfx.window);
   binocle_window_end_frame(game.gfx.window);
@@ -414,10 +440,40 @@ int main(int argc, char *argv[])
   font_sprite_pos.x = 0;
   font_sprite_pos.y = -256;
 
+  binocle_ttfont_load_desc desc = {
+    .filename = "/assets/font/default.ttf",
+    .shader = game.gfx.default_shader,
+    .fs = BINOCLE_FS_PHYSFS,
+    .texture_width = 1024,
+    .texture_height = 1024,
+    .size = 8,
+    .filter = SG_FILTER_LINEAR,
+    .wrap = SG_WRAP_CLAMP_TO_EDGE,
+  };
+  game.gfx.default_font = binocle_ttfont_load_with_desc(&desc);
+
   game.gfx.sprite_batch = binocle_sprite_batch_new();
   game.gfx.sprite_batch.gd = &game.gfx.gd;
 
   binocle_gd_setup_default_pipeline(&game.gfx.gd, DESIGN_WIDTH, DESIGN_HEIGHT, game.gfx.default_shader, screen_shader);
+  binocle_gd_setup_flat_pipeline(&game.gfx.gd);
+
+  gui_resources_setup();
+  game.gui.debug_gui_handle = gui_resources_create_gui("debug");
+  gui_init_imgui(game.gui.debug_gui_handle, game.gfx.window->width, game.gfx.window->height, game.gfx.window->width, game.gfx.window->height);
+  gui_setup_screen_pipeline(game.gui.debug_gui_handle, screen_shader, false);
+
+  game.gui.game_gui_handle = gui_resources_create_gui("game");
+  gui_set_apply_scissor(game.gui.game_gui_handle, true);
+  gui_set_viewport_adapter(game.gui.game_gui_handle, binocle_camera_get_viewport_adapter(game.gfx.camera));
+  gui_init_imgui(game.gui.game_gui_handle, DESIGN_WIDTH, DESIGN_HEIGHT, game.gfx.window->width, game.gfx.window->height);
+  gui_setup_screen_pipeline(game.gui.game_gui_handle, screen_shader, true);
+
+  game.audio = binocle_audio_new();
+  binocle_audio_init(&game.audio);
+  binocle_audio_music theme = cache_load_music("/assets/music/theme.mp3");
+  binocle_audio_play_music_stream(&theme);
+  binocle_audio_set_music_volume(&theme, 0);
 
   game.level = ecs_set_name(game.ecs, 0, "level");
   ecs_set(game.ecs, game.level, level_component_t, {
