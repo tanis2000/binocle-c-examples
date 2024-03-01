@@ -32,6 +32,8 @@
 #define MAX_CACHED_IMAGES (256)
 #define MAX_CACHED_MUSIC (16)
 #define MAX_CACHED_SOUNDS (256)
+#define MAX_STATES (16)
+#define MAX_STATE_NAME_LEN (256)
 
 /// The handle of a cooldown
 typedef struct cooldown_handle_t {
@@ -301,8 +303,13 @@ typedef struct state_machine_t {
   int previous_state;
 } state_machine_t;
 
+typedef struct blackboard_t {
+  char states[MAX_STATES][MAX_STATE_NAME_LEN];
+} blackboard_t;
+
 typedef struct state_component_t {
   state_machine_t state_machine;
+  blackboard_t blackboard;
 } state_component_t;
 
 /// The main game state

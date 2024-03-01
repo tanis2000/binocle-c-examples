@@ -39,6 +39,36 @@ void system_input_update(ecs_iter_t *it) {
   }
 }
 
+void system_animation_controller(ecs_iter_t *it) {
+  graphics_component_t *graphics = ecs_field(it, graphics_component_t, 1);
+  health_component_t *healths = ecs_field(it, health_component_t, 2);
+  physics_component_t *physics = ecs_field(it, physics_component_t, 3);
+  for (int i = 0; i < it->count; i++) {
+    graphics_component_t *g = &graphics[i];
+    health_component_t *h = &healths[i];
+    physics_component_t *ph = &physics[i];
+    ecs_entity_t e = it->entities[i];
+
+    if (h->health < 0) {
+      entity_play_animation(g, g->anim.death, false);
+    } else if (ph->dy > 0 && !entity_on_ground(e)) {
+      entity_play_animation(g, g->anim.jump_up, false);
+    } else if (!entity_on_ground(e)) {
+      entity_play_animation(g, g->anim.jump_down, false);
+    } else if (entity_on_ground(e) && ph->dx != 0) {
+      entity_play_animation(g, g->anim.run, false);
+    } else if (hero_is_shooting(e)) {
+      entity_play_animation(g, g->anim.shoot, false);
+    } else {
+      if (m_rand_range_float(0, 1) < 0.4f) {
+        entity_play_animation(g, g->anim.idle2, false);
+      } else {
+        entity_play_animation(g, g->anim.idle1, false);
+      }
+    }
+  }
+}
+
 void system_animations_update(ecs_iter_t *it) {
   graphics_component_t *graphics = ecs_field(it, graphics_component_t, 1);
   for (int i = 0; i < it->count; i++) {
