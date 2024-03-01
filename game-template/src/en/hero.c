@@ -3,10 +3,8 @@
 //
 
 #include "hero.h"
-#include "binocle_log.h"
 #include "entity.h"
-#include "binocle_input.h"
-#include "binocle_audio.h"
+#include "cooldown.h"
 
 extern struct game_t game;
 
@@ -104,8 +102,37 @@ ecs_entity_t hero_new() {
   entity_add_animation(g, ANIMATION_ID_HERO_JUMP_DOWN, (int[]){10}, 1, 14, true);
   entity_add_animation(g, ANIMATION_ID_HERO_SHOOT, (int[]){11, 12}, 2, 8, true);
   entity_add_animation(g, ANIMATION_ID_HERO_DEATH, (int[]){13, 14}, 2, 8, false);
+  g->anim.idle1 = ANIMATION_ID_HERO_IDLE1;
+  g->anim.idle2 = ANIMATION_ID_HERO_IDLE2;
+  g->anim.run = ANIMATION_ID_HERO_RUN;
+  g->anim.jump_up = ANIMATION_ID_HERO_JUMP_UP;
+  g->anim.jump_down = ANIMATION_ID_HERO_JUMP_DOWN;
+  g->anim.shoot = ANIMATION_ID_HERO_SHOOT;
+  g->anim.death = ANIMATION_ID_HERO_DEATH;
 
   ecs_set(game.ecs, e, state_component_t, {0});
+  ecs_set(game.ecs, e, cooldowns_component_t, {0});
+  cooldowns_component_t *cds = ecs_get_mut(game.ecs, e, cooldowns_component_t);
+  cooldown_system_init(&cds->pools, 16);
 
   return e;
+}
+
+bool hero_is_shooting(cooldowns_component_t *cds) {
+  return cooldown_has(&cds->pools, "shoot");
+}
+
+void hero_on_damage_taken(cooldowns_component_t *cds, health_component_t *health, int32_t amount, int32_t direction) {
+  if (cooldown_has(&cds->pools, "hurt")) {
+    return;
+  }
+
+  health->health -= amount;
+  if (health->health <= 0) {
+    //game_camera_shake(&game.game_camera, 2, 0.3f);
+    //entity_bump(e, -e->dir * 0.4f, -0.15f);
+  } else {
+    //binocle_audio_play_sound(G.sounds["hurt"]);
+    cooldown_set(&cds->pools, "hurt", 0.2f, NULL);
+  }
 }

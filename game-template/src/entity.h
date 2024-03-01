@@ -26,6 +26,7 @@ bool entity_on_ground(ecs_entity_t en);
 void entity_add_animation(graphics_component_t *graphics, ANIMATION_ID id, int frames[], int frames_count, float period, bool loop);
 void entity_play_animation(graphics_component_t *graphics, ANIMATION_ID id, bool force);
 void entity_update_animation(graphics_component_t *graphics, float dt);
+void entity_shoot(cooldowns_component_t *cds);
 
 void draw_entities(ecs_iter_t *it);
 #endif //GAME_TEMPLATE_ENTITY_H

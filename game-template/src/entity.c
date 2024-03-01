@@ -11,6 +11,7 @@
 #include "cache.h"
 #include "level.h"
 #include "stb_ds.h"
+#include "cooldown.h"
 
 extern struct game_t game;
 
@@ -416,4 +417,10 @@ void entity_update_animation(graphics_component_t *graphics, float dt) {
     graphics->frame = anim->frames[graphics->animation_frame];
     SDL_memcpy(&graphics->sprite->subtexture, &graphics->frames[graphics->frame], sizeof(binocle_subtexture));
   }
+}
+
+void entity_shoot(cooldowns_component_t *cds) {
+  //entity_t *bullet = bullet_new(e);
+  cooldown_set(&cds->pools, "shoot", 0.15f, NULL);
+//  binocle_audio_play_sound(G.sounds["shoot"]);
 }

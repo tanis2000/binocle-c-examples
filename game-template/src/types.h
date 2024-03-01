@@ -19,7 +19,7 @@
 
 // TODO: particles
 // TODO: entities
-// TODO: cooldown
+// TODO: cooldown -> move that to component/system
 // TODO: gui with imgui ... meh... both debug and in-game
 // TODO: scene graph
 
@@ -312,6 +312,10 @@ typedef struct state_component_t {
   blackboard_t blackboard;
 } state_component_t;
 
+typedef struct cooldowns_component_t {
+  pools_t pools;
+} cooldowns_component_t;
+
 /// The main game state
 typedef struct game_t {
   bool debug;
@@ -345,7 +349,9 @@ typedef struct game_t {
     ecs_entity_t draw;
     ecs_entity_t draw_level;
     ecs_entity_t input_update;
+    ecs_entity_t animation_controller;
     ecs_entity_t animations_update;
+    ecs_entity_t cooldowns_update;
   } systems;
   struct {
     gui_handle_t debug_gui_handle;
@@ -377,6 +383,7 @@ extern ECS_COMPONENT_DECLARE(level_component_t);
 extern ECS_COMPONENT_DECLARE(game_camera_component_t);
 extern ECS_COMPONENT_DECLARE(input_component_t);
 extern ECS_COMPONENT_DECLARE(state_component_t);
+extern ECS_COMPONENT_DECLARE(cooldowns_component_t);
 
 extern ECS_TAG_DECLARE(player_component_t);
 
