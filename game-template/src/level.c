@@ -13,7 +13,7 @@ int level_coord_id(level_component_t *level, int cx, int cy) {
   return cx + cy * level->map->width;
 }
 
-bool level_is_valid(level_component_t *level, int cx, int cy) {
+bool level_is_valid(const level_component_t *level, int cx, int cy) {
   return cx >= 0 && cx < level->map->width && cy >= 0 && cy <= level->map->height;
 }
 
@@ -23,7 +23,7 @@ void level_set_collision(level_component_t *level, int x, int y, bool v) {
   }
 }
 
-bool level_has_collision(level_component_t *level, int32_t cx, int32_t cy) {
+bool level_has_collision(const level_component_t *level, int32_t cx, int32_t cy) {
   if (!level_is_valid(level, cx, cy)) {
     return true;
   }

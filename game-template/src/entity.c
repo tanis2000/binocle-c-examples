@@ -12,6 +12,7 @@
 #include "level.h"
 #include "stb_ds.h"
 #include "cooldown.h"
+#include "en/bullet.h"
 
 extern struct game_t game;
 
@@ -227,12 +228,11 @@ void entity_set_pos_grid(ecs_entity_t en, int32_t x, int32_t y) {
   p->yr = 0;
 }
 
-void entity_set_pos_pixel(pools_t *pools, entity_handle_t handle, int32_t x, int32_t y) {
-  entity_t *entity = entity_at(pools, handle.id);
-  entity->cx = x / GRID;
-  entity->cy = y / GRID;
-  entity->xr = (float)(x - entity->cx * GRID) / (float)GRID;
-  entity->yr = (float)(y - entity->cy * GRID) / (float)GRID;
+void entity_set_pos_pixel(physics_component_t *p, int32_t x, int32_t y) {
+  p->cx = x / GRID;
+  p->cy = y / GRID;
+  p->xr = (float)(x - p->cx * GRID) / (float)GRID;
+  p->yr = (float)(y - p->cy * GRID) / (float)GRID;
 }
 
 void entity_bump(entity_handle_t handle, float x, float y) {
@@ -419,8 +419,19 @@ void entity_update_animation(graphics_component_t *graphics, float dt) {
   }
 }
 
-void entity_shoot(cooldowns_component_t *cds) {
-  //entity_t *bullet = bullet_new(e);
+float entity_dir_to_ang(physics_component_t *p) {
+  if (p->dir == 1) {
+    return 0;
+  }
+  return M_PI;
+}
+
+void entity_shoot(ecs_entity_t owner_entity, cooldowns_component_t *cds) {
+  bullet_new(owner_entity);
   cooldown_set(&cds->pools, "shoot", 0.15f, NULL);
 //  binocle_audio_play_sound(G.sounds["shoot"]);
+}
+
+void entity_kill(ecs_entity_t en) {
+  ecs_delete(game.ecs, en);
 }

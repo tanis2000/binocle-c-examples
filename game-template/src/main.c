@@ -99,6 +99,8 @@ ECS_COMPONENT_DECLARE(game_camera_component_t);
 ECS_COMPONENT_DECLARE(input_component_t);
 ECS_COMPONENT_DECLARE(state_component_t);
 ECS_COMPONENT_DECLARE(cooldowns_component_t);
+ECS_COMPONENT_DECLARE(owned_component_t);
+ECS_COMPONENT_DECLARE(projectile_component_t);
 
 ECS_TAG_DECLARE(player_component_t);
 
@@ -179,6 +181,7 @@ void main_loop() {
 
   ecs_run(game.ecs, game.systems.cooldowns_update, dt, NULL);
   ecs_run(game.ecs, game.systems.input_update, dt, NULL);
+  ecs_run(game.ecs, game.systems.projectile_movement_update, dt, NULL);
   ecs_run(game.ecs, game.systems.update_entities, dt, NULL);
   ecs_run(game.ecs, game.systems.animation_controller, dt, NULL);
   ecs_run(game.ecs, game.systems.animations_update, dt, NULL);
@@ -233,6 +236,8 @@ int main(int argc, char *argv[])
   ECS_COMPONENT_DEFINE(game.ecs, input_component_t);
   ECS_COMPONENT_DEFINE(game.ecs, state_component_t);
   ECS_COMPONENT_DEFINE(game.ecs, cooldowns_component_t);
+  ECS_COMPONENT_DEFINE(game.ecs, owned_component_t);
+  ECS_COMPONENT_DEFINE(game.ecs, projectile_component_t);
 
   ECS_TAG_DEFINE(game.ecs, player_component_t);
 
@@ -349,6 +354,17 @@ int main(int argc, char *argv[])
       {.id = ecs_id(cooldowns_component_t)},
     },
     .callback = system_cooldowns_update
+  });
+
+  game.systems.projectile_movement_update = ecs_system(game.ecs, {
+    .entity = ecs_entity(game.ecs, {
+      .name = "update_projectile_movement"
+    }),
+    .query.filter.terms = {
+      {.id = ecs_id(projectile_component_t)},
+      {.id = ecs_id(physics_component_t)},
+    },
+    .callback = system_projectile_movement_update
   });
 
   binocle_app_desc_t app_desc = {0};
@@ -546,6 +562,8 @@ int main(int argc, char *argv[])
   free(binocle_data_dir);
   binocle_app_destroy(&app);
   cooldown_system_shutdown(&game.pools);
+  cooldowns_component_t *cds = ecs_get_mut(game.ecs, game.hero, cooldowns_component_t);
+  cooldown_system_shutdown(&cds->pools);
   ecs_fini(game.ecs);
 }
 

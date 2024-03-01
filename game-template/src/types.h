@@ -316,6 +316,16 @@ typedef struct cooldowns_component_t {
   pools_t pools;
 } cooldowns_component_t;
 
+typedef struct owned_component_t {
+  ecs_entity_t owner;
+} owned_component_t;
+
+typedef struct projectile_component_t {
+  float speed_x;
+  float speed_y;
+  float ang;
+} projectile_component_t;
+
 /// The main game state
 typedef struct game_t {
   bool debug;
@@ -352,6 +362,7 @@ typedef struct game_t {
     ecs_entity_t animation_controller;
     ecs_entity_t animations_update;
     ecs_entity_t cooldowns_update;
+    ecs_entity_t projectile_movement_update;
   } systems;
   struct {
     gui_handle_t debug_gui_handle;
@@ -384,6 +395,8 @@ extern ECS_COMPONENT_DECLARE(game_camera_component_t);
 extern ECS_COMPONENT_DECLARE(input_component_t);
 extern ECS_COMPONENT_DECLARE(state_component_t);
 extern ECS_COMPONENT_DECLARE(cooldowns_component_t);
+extern ECS_COMPONENT_DECLARE(owned_component_t);
+extern ECS_COMPONENT_DECLARE(projectile_component_t);
 
 extern ECS_TAG_DECLARE(player_component_t);
 
