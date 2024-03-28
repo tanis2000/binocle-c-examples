@@ -59,12 +59,16 @@ graphics_component_t bullet_graphics_new() {
 ecs_entity_t bullet_new(ecs_entity_t owner_entity) {
   physics_component_t *owner_physics = ecs_get(game.ecs, owner_entity, physics_component_t);
   ecs_entity_t e = ecs_entity(game.ecs, {.name = "bullet"});
-  ecs_set(game.ecs, e, collider_component_t, {
+
+  ecs_set(game.ecs, e, collider_component_t, { 0 });
+  collider_component_t *collider = ecs_get_mut(game.ecs, e, collider_component_t);
+  collider_component_t coll = {
     .hei = 2,
     .wid = 4,
     .has_collisions = false,
     .radius = 2,
-  });
+  };
+  memcpy(collider, &coll, sizeof(collider_component_t));
   ecs_set(game.ecs, e, projectile_component_t, {
     .speed_x = 1.0f,
     .speed_y = 0.0f,
@@ -94,7 +98,10 @@ ecs_entity_t bullet_new(ecs_entity_t owner_entity) {
   char *str = ecs_type_str(game.ecs, type);
   binocle_log_info(str);
 
-  entity_set_pos_pixel(p, entity_get_center_x(owner_entity), entity_get_center_y(owner_entity));
+  physics_component_t *owner_p = ecs_get(game.ecs, owner_entity, physics_component_t);
+  graphics_component_t *owner_g = ecs_get(game.ecs, owner_entity, graphics_component_t);
+  collider_component_t *owner_c = ecs_get(game.ecs, owner_entity, collider_component_t);
+  entity_set_pos_pixel(p, entity_get_center_x(owner_p, owner_g, owner_c), entity_get_center_y(owner_p, owner_g, owner_c));
 
   return e;
 }

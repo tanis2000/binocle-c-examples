@@ -189,6 +189,7 @@ void main_loop() {
   ecs_run(game.ecs, game.systems.update_game_camera, dt, NULL);
   ecs_run(game.ecs, game.systems.draw_level, dt, NULL);
   ecs_run(game.ecs, game.systems.draw, dt, NULL);
+  ecs_run(game.ecs, game.systems.debug_draw, dt, NULL);
   ecs_run(game.ecs, game.systems.post_update_game_camera, dt, NULL);
 
   kmMat4 view_matrix;
@@ -249,6 +250,18 @@ int main(int argc, char *argv[])
       {.id = ecs_id(graphics_component_t)}
     },
     .callback = draw_entities
+  });
+
+  game.systems.debug_draw = ecs_system(game.ecs, {
+    .entity = ecs_entity(game.ecs, {
+      .name = "debug_draw"
+    }),
+    .query.filter.terms = {
+      {.id = ecs_id(graphics_component_t)},
+      {.id = ecs_id(physics_component_t)},
+      {.id = ecs_id(collider_component_t)},
+    },
+    .callback = entity_system_debug_draw_entities
   });
 
   game.systems.draw_level = ecs_system(game.ecs, {

@@ -30,6 +30,18 @@ void draw_entities(ecs_iter_t *it) {
   }
 }
 
+void entity_system_debug_draw_entities(ecs_iter_t *it) {
+  if (!game.debug) {
+    return;
+  }
+  graphics_component_t *g = ecs_field(it, graphics_component_t, 1);
+  physics_component_t *p = ecs_field(it, physics_component_t , 2);
+  collider_component_t *c = ecs_field(it, collider_component_t , 3);
+  for (int i = 0 ; i < it->count; i++) {
+    entity_draw_debug(&p[i], &g[i], &c[i]);
+  }
+}
+
 void entity_system_update(ecs_iter_t *it) {
   physics_component_t *physics = ecs_field(it, physics_component_t, 1);
   collider_component_t *collider = ecs_field(it, collider_component_t, 2);
@@ -321,17 +333,14 @@ float entity_get_bottom(physics_component_t *physics, graphics_component_t *grap
   return entity_get_attach_y(physics) + (0.0f - graphics->pivot_y) * collider->hei;
 }
 
-float entity_get_center_x(ecs_entity_t en) {
-  physics_component_t *physics = ecs_get(game.ecs, en, physics_component_t);
-  graphics_component_t *graphics = ecs_get(game.ecs, en, graphics_component_t);
-  collider_component_t *collider = ecs_get(game.ecs, en, collider_component_t);
+float entity_get_center_x(physics_component_t *physics, graphics_component_t *graphics, collider_component_t *collider) {
   return entity_get_attach_x(physics) + (0.5f - graphics->pivot_x) * collider->wid;
 }
 
-float entity_get_center_y(ecs_entity_t en) {
-  physics_component_t *physics = ecs_get(game.ecs, en, physics_component_t);
-  graphics_component_t *graphics = ecs_get(game.ecs, en, graphics_component_t);
-  collider_component_t *collider = ecs_get(game.ecs, en, collider_component_t);
+float entity_get_center_y(physics_component_t *physics, graphics_component_t *graphics, collider_component_t *collider) {
+//  physics_component_t *physics = ecs_get(game.ecs, en, physics_component_t);
+//  graphics_component_t *graphics = ecs_get(game.ecs, en, graphics_component_t);
+//  collider_component_t *collider = ecs_get(game.ecs, en, collider_component_t);
   return entity_get_attach_y(physics) + (0.5f - graphics->pivot_y) * collider->hei;
 }
 
@@ -342,22 +351,34 @@ bool entity_is_inside(physics_component_t *physics, graphics_component_t *graphi
   && py <= entity_get_top(physics, graphics, collider));
 }
 
-/*
-void entity_draw_debug(physics_component_t *physics, graphics_component_t *graphics, collider_t *collider) {
-  if (game.debug_enabled) {
-    kmAABB2 viewport = binocle_camera_get_viewport(game.gfx.camera);
-    char s[1024];
-    sprintf(s, "(%d,%d) (%.0f, %.0f)", physics->cx, physics->cy, entity_get_center_x(physics, graphics, collider), entity_get_center_y(physics, graphics, collider));
-    binocle_ttfont_draw_string(&game.gfx.default_font, s, &game.gfx.gd, entity_get_center_x(physics, graphics, collider), entity_get_top(physics, graphics, collider), viewport, binocle_color_white(), &game.gfx.camera, LAYER_TEXT);
-    kmAABB2 rect;
-    kmVec2 center;
-    center.x = entity_get_center_x(physics, graphics, collider);
-    center.y = entity_get_center_y(physics, graphics, collider);
-    kmAABB2Initialize(&rect, &center, collider->wid, collider->hei, 0);
-    binocle_gd_draw_rect(&game.gfx.gd, rect, binocle_color_green_translucent(), viewport, &game.gfx.camera, NULL, LAYER_TEXT + 1);
-  }
+void entity_draw_debug(physics_component_t *physics, graphics_component_t *graphics, collider_component_t *collider) {
+  kmAABB2 viewport;
+  kmVec2 vpCenter = {
+    .x = DESIGN_WIDTH / 2,
+    .y = DESIGN_HEIGHT / 2,
+  };
+  kmAABB2Initialize(&viewport, &vpCenter, DESIGN_WIDTH, DESIGN_HEIGHT, 0);
+  char s[1024];
+  sprintf(s, "(%d,%d) (%.0f, %.0f)", physics->cx, physics->cy, entity_get_center_x(physics, graphics, collider),
+          entity_get_center_y(physics, graphics, collider));
+  binocle_ttfont_draw_string(game.gfx.default_font, s, &game.gfx.gd, entity_get_center_x(physics, graphics, collider),
+                             entity_get_top(physics, graphics, collider), viewport, binocle_color_white(),
+                             &game.gfx.camera, LAYER_TEXT);
+  kmAABB2 rect;
+  kmVec2 center;
+  center.x = entity_get_center_x(physics, graphics, collider);
+  center.y = entity_get_center_y(physics, graphics, collider);
+  kmAABB2Initialize(&rect, &center, collider->wid, collider->hei, 0);
+  binocle_gd_draw_rect(&game.gfx.gd, rect, binocle_color_green_translucent(), viewport, &game.gfx.camera, NULL,
+                       LAYER_TEXT + 1);
+  center = (kmVec2){
+    .x = entity_get_attach_x(physics),
+    .y = entity_get_attach_y(physics),
+  };
+  kmAABB2Initialize(&rect, &center, 3, 3, 0);
+  binocle_gd_draw_rect_outline(&game.gfx.gd, rect, binocle_color_white(), viewport, &game.gfx.camera,
+                       LAYER_TEXT + 1);
 }
-*/
 
 bool entity_is_alive(health_component_t *health) {
   return health->health > 0;

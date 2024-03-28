@@ -333,7 +333,6 @@ typedef struct game_t {
   float dt;
   float elapsed_time;
   cache_t cache;
-  bool debug_enabled;
   binocle_input input;
   ecs_world_t *ecs;
   /// The level entity
@@ -357,6 +356,7 @@ typedef struct game_t {
     ecs_entity_t update_game_camera;
     ecs_entity_t post_update_game_camera;
     ecs_entity_t draw;
+    ecs_entity_t debug_draw;
     ecs_entity_t draw_level;
     ecs_entity_t input_update;
     ecs_entity_t animation_controller;

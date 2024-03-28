@@ -94,8 +94,11 @@ void game_camera_center_on_target(game_camera_component_t *gc) {
     return;
   }
 
-  l_point_set_level_x(&gc->raw_focus, entity_get_center_x(gc->target) + gc->target_off_x);
-  l_point_set_level_y(&gc->raw_focus, entity_get_center_y(gc->target) + gc->target_off_y);
+  physics_component_t *p = ecs_get(game.ecs, gc->target, physics_component_t);
+  graphics_component_t *g = ecs_get(game.ecs, gc->target, graphics_component_t);
+  collider_component_t *c = ecs_get(game.ecs, gc->target, collider_component_t);
+  l_point_set_level_x(&gc->raw_focus, entity_get_center_x(p, g, c) + gc->target_off_x);
+  l_point_set_level_y(&gc->raw_focus, entity_get_center_y(p, g, c) + gc->target_off_y);
 }
 
 void game_camera_track_entity(game_camera_component_t *gc, ecs_entity_t e, bool immediate, float speed) {
@@ -127,8 +130,11 @@ void update_game_camera(ecs_iter_t *it) {
     if (gc->target != 0) {
       float spd_x = 0.015f * gc->tracking_speed * gc->zoom;
       float spd_y = 0.023f * gc->tracking_speed * gc->zoom;
-      float tx = entity_get_center_x(gc->target) + gc->target_off_x;
-      float ty = entity_get_center_y(gc->target) + gc->target_off_y;
+      physics_component_t *p = ecs_get(game.ecs, gc->target, physics_component_t);
+      graphics_component_t *g = ecs_get(game.ecs, gc->target, graphics_component_t);
+      collider_component_t *c = ecs_get(game.ecs, gc->target, collider_component_t);
+      float tx = entity_get_center_x(p, g, c) + gc->target_off_x;
+      float ty = entity_get_center_y(p, g, c) + gc->target_off_y;
       float a = l_point_ang_to(&gc->raw_focus, NULL, NULL, tx, ty);
       float dist_x = fabsf(tx - l_point_get_level_x(&gc->raw_focus));
       if (dist_x >= gc->dead_zone_pct_x * (float)game_camera_get_px_wid(gc)) {
